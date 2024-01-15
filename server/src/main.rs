@@ -1,5 +1,7 @@
-use std::{ops::Range, ops::RangeFrom};
-use server::tokenizer::{*, self};
+// use std::{ops::Range, ops::RangeFrom};
+use server::tokenizer::{self};
+
+/* COMMENT BACK IN AFTER TESTING TOKENIZER
 
 enum Style {
     Regular,
@@ -37,9 +39,17 @@ struct Entity {
     style: Style
 }
 
+*/
+
 fn main() {
-    let x = 0..;
-    let tokens = tokenizer::tokenize_line("hello".to_string());
+    // let x = 0..;
+    let tokens = tokenizer::tokenize_line("gaming-and-such".to_string());
+    match tokens {
+        None => println!("None"),
+        Some(vec) => {
+            println!("{:?}", vec);
+        }
+    }
 }
 
 

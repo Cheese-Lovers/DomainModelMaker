@@ -1,3 +1,5 @@
+use std::fmt; 
+
 pub enum Token {
     Identifier(String),
     LeftArrow,
@@ -9,6 +11,21 @@ pub enum Token {
     Error(String) // for testing purposes
 }
 
+impl fmt::Debug for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Token::Identifier(string) => write!(f, "ID \"{}\"", string),
+            Token::LeftArrow => write!(f, "L_Arrow"),
+            Token::RightArrow => write!(f, "R_Arrow"),
+            Token::Dash => write!(f, "Dash"),
+            Token::Number(n) => write!(f, "Num {}", n),
+            Token::Dot => write!(f, "Dot"),
+            Token::Escape => write!(f, "Escape"),
+            Token::Error(err) => write!(f, "{}", err),
+        }
+    }
+}
+
 pub enum State {
     Identifier(String),
     Else(char),
@@ -17,6 +34,7 @@ pub enum State {
 
 
 // Smelliest Code in the Universe
+// NEEDS FIXING: THE LAST TOKEN IS NOT ACCOUNTED FOR
 pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
     let mut output = Vec::new();
     let mut state: State;
@@ -35,7 +53,7 @@ pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
         match state {
             State::Identifier(ref s) => {
                 state = match c {
-                    '-' | '.' | '<' | '>' | '\\' => {
+                    '-' | '.' | '<' | '>' | '\\' | '\n' => {
                         output.push(Token::Identifier(s.clone()));
                         State::Else(c)
                     },
@@ -48,7 +66,7 @@ pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
             },
             State::Number(ref n) => {
                 state = match c {
-                    '-' | '.' | '<' | '>' | '\\' => {
+                    '-' | '.' | '<' | '>' | '\\' | '\n' => {
                         output.push(Token::Number(n.parse().unwrap()));
                         State::Else(c)
                     },
@@ -62,20 +80,10 @@ pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
                 }
             }
             State::Else(ch) => {
-                output.push(
-                    match ch {
-                        '-' => Token::Dash,
-                        '.' => Token::Dot,
-                        '<' => Token::LeftArrow,
-                        '>' => Token::RightArrow,
-                        '\\' => Token::Escape,
-                        '\n' => Token::Identifier(String::new()),
-                        _ => Token::Error("Error, unrecognized symbol ".to_string() + &ch.to_string())
-                    }
-                );
-                    
+                output.push(generate_else_token(ch));
+                
                 state = match c {
-                    '-'| '.' | '<' | '>' | '\\' => {
+                    '-'| '.' | '<' | '>' | '\\' | '\n' => {
                         State::Else(c)
                     },
                     x if x.is_numeric() => {
@@ -89,5 +97,25 @@ pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
         }
     }
 
+    output.push(
+        match state {
+            State::Else(ch) => generate_else_token(ch),
+            State::Number(n) => Token::Number(n.parse().unwrap()),
+            State::Identifier(s) => Token::Identifier(s.clone()),
+        }
+    );
+
     Some(output)
+}
+
+fn generate_else_token(ch: char) -> Token {
+    match ch {
+        '-' => Token::Dash,
+        '.' => Token::Dot,
+        '<' => Token::LeftArrow,
+        '>' => Token::RightArrow,
+        '\\' => Token::Escape,
+        '\n' => Token::Identifier(String::new()),
+        _ => Token::Error("Error, unrecognized symbol ".to_string() + &ch.to_string())
+    }
 }
