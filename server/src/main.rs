@@ -1,49 +1,10 @@
-// use std::{ops::Range, ops::RangeFrom};
 use server::tokenizer::{self};
-
-/* COMMENT BACK IN AFTER TESTING TOKENIZER
-
-enum Style {
-    Regular,
-    Dotted,
-    Dashed,
-    Bold
-}
-
-enum Arrow {
-    None,
-    Arrow
-}
-type EntityIndex = usize;
-struct Relation {
-    text: String,
-    entity_1: EntityIndex,
-    entity_2: EntityIndex,
-    arrow_1: Arrow,
-    arrow_2: Arrow,
-    mult_1: Multiplicity,
-    mult_2: Multiplicity
-}
-
-enum Multiplicity {
-    Range(Range<usize>),
-    Number(usize),
-    RangeFrom(RangeFrom<usize>)
-}
-
-type ColorHexValue = u32;
-
-struct Entity {
-    name: String,
-    color: ColorHexValue,
-    style: Style
-}
-
-*/
 
 fn main() {
     // let x = 0..;
-    let tokens = tokenizer::tokenize_line("gaming-and-such".to_string());
+    let input = "controller-1..-controls-1>game";
+    let tokens = tokenizer::tokenize_line(input.to_string());
+    println!("{}", input);
     match tokens {
         None => println!("None"),
         Some(vec) => {
