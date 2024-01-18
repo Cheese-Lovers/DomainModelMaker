@@ -15,9 +15,9 @@ export default function DropdownButton(props: { name: string, children: Dropdown
             {props.name}
             <div className="button-dropdown">
                 <ul hidden={!open}>
-                    {children.map(opt => {
+                    {children.map((opt, key) => {
                         const onClick = opt.onClick ?? (() => { });
-                        return <li>
+                        return <li key={key}>
                             <button className="flush" onClick={() => onClick()}>
                                 {opt.name}
                             </button>

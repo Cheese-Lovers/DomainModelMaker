@@ -1,0 +1,22 @@
+.code-input {
+  display: flex;
+  flex-direction: row;
+  background-color: #555;
+  padding: 0.5rem;
+  width: 25rem;
+  gap: 0.5rem;
+}
+
+.code-input>textarea {
+  height: 100%;
+  width: 100%;
+  color: white;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.code-input>.line-counter {
+  width: 3rem;
+  text-align: right;
+  overflow-y: hidden;
+  color: lightgray;
+}
