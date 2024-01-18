@@ -2,6 +2,8 @@ nav {
   display: flex;
   flex-direction: row;
   background-color: whitesmoke;
+  box-shadow: 0rem -1rem 1rem 0.5rem black;
+  z-index: 1;
 }
 
 nav>.nav-buttons {
