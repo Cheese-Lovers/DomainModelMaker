@@ -1,0 +1,21 @@
+.dropdown-button {
+  position: relative;
+}
+
+.button-dropdown {
+  position: absolute;
+  background-color: whitesmoke;
+  width: 10rem;
+  top: 100%;
+  left: 0;
+}
+
+.button-dropdown>ul {
+  list-style: none;
+}
+
+.button-dropdown>ul>li>button {
+  padding: 0.25rem 1rem;
+  text-align: left;
+  width: 100%;
+}

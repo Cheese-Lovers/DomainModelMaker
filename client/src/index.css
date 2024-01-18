@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+
+  font-size: 1em;
+  font-family: Roboto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100lvh;
+}
+
+button.flush {
+  display: block;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+
+button.flush:hover {
+  background-color: #00000020;
+}
+
+textarea {
+  resize: none;
+  border: unset;
+  outline: unset;
+  background: unset;
+}

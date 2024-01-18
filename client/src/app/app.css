@@ -1,0 +1,18 @@
+main {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+}
+
+main>#left-panel {
+  flex: 0 0 20rem;
+  background-color: #555;
+}
+
+main>#left-panel>textarea {
+  height: 100%;
+  width: 100%;
+  padding: 0.5rem;
+  color: white;
+  font-family: 'Courier New', Courier, monospace;
+}

@@ -1,0 +1,22 @@
+nav {
+  display: flex;
+  flex-direction: row;
+  background-color: whitesmoke;
+}
+
+nav>.nav-buttons {
+  display: flex;
+  flex-direction: row;
+}
+
+nav>.file-name {
+  display: flex;
+  width: 100%;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+nav>.nav-buttons>button {
+  padding: 0.5rem 1rem;
+}
