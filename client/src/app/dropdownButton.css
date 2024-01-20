@@ -6,7 +6,8 @@
   position: absolute;
   background-color: whitesmoke;
   box-shadow: 0.25rem 0.25rem 0.25rem -0rem #0003;
-  width: 10rem;
+  min-width: 10rem;
+  max-width: 20rem;
   top: 100%;
   left: 0;
 }
@@ -16,7 +17,9 @@
 }
 
 .button-dropdown>ul>li>button {
-  padding: 0.25rem 1rem;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.25rem;
+  gap: 0.5rem;
   width: 100%;
 }

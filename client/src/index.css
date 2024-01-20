@@ -17,20 +17,20 @@
   min-height: 100lvh;
 }
 
-button.flush {
+.flush {
   display: block;
+  resize: none;
   background-color: transparent;
   border: none;
   outline: none;
 }
 
-button.flush:hover {
-  background-color: #00000020;
+button.flush,
+input.flush {
+  text-align: center;
 }
 
-textarea {
-  resize: none;
-  border: unset;
-  outline: unset;
-  background: unset;
+button.flush:hover,
+input.flush:focus {
+  background-color: #00000020;
 }

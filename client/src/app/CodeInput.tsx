@@ -1,19 +1,25 @@
-import React, { useRef, useState } from "react";
+import React, { useContext, useMemo, useRef } from "react";
 import { ReactElement } from "react";
 import "./codeInput.css"
+import { EditorContext } from "./App.tsx";
+
 
 export default function CodeInput(): ReactElement {
-    const [lineCount, setLineCount] = useState<number>(1);
+    const [textContent, setTextContent] = useContext(EditorContext)!.textContent;
     const ref = useRef<HTMLTextAreaElement>(null);
+
+    const lineCount = useMemo(() => {
+        return textContent.split('\n').length;
+    }, [textContent]);
 
     // General idea taken from this article:
     // https://medium.com/weekly-webtips/enable-line-numbering-to-any-html-textarea-35e15ea320e2
     // and 'React-ified'.
     return <div className="code-input">
-        <textarea ref={ref} className='line-counter' wrap='off' readOnly={true}
+        <textarea ref={ref} className='flush line-counter' wrap='off' readOnly={true}
             value={Array(lineCount).fill(0).map((_, i) => `${i + 1}.`).join('\n')}>
         </textarea>
-        <textarea wrap="off"
+        <textarea className="flush" wrap="off" value={textContent}
             onInput={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 // Handle tab input and update line count
                 const codeEditor = e.target as HTMLTextAreaElement;
@@ -25,7 +31,7 @@ export default function CodeInput(): ReactElement {
                     codeEditor.setSelectionRange(selectionStart + 2, selectionStart + 2)
                 }
 
-                setLineCount(codeEditor.value.split('\n').length);
+                setTextContent(value);
             }}
             onScroll={e => {
                 // Match scrolling between the line counter element and the code editor
