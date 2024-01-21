@@ -10,7 +10,7 @@ root.render(
     </React.StrictMode>
 );
 
-export function saveFile(text, filename) {
+export function saveFile(text: string, filename: string) {
     const file = new Blob([text], { type: 'text/plain' });
     const a = document.createElement("a");
     const url = URL.createObjectURL(file);
@@ -21,5 +21,5 @@ export function saveFile(text, filename) {
     setTimeout(function () {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-    }, 0);
+    });
 }

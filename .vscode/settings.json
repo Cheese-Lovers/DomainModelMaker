@@ -1,17 +1,18 @@
 {
-    "editor.formatOnSave": true,
     "editor.detectIndentation": false,
     "[html]": {
+        "editor.formatOnSave": true,
         "editor.tabSize": 2,
     },
     "[css]": {
+        "editor.formatOnSave": true,
         "editor.tabSize": 2,
     },
     "[javascript]": {
+        "editor.formatOnSave": true,
         "editor.tabSize": 4,
     },
     "[json]": {
-        "editor.formatOnSave": false,
         "editor.tabSize": 4,
     }
     // Uncomment to use rustfmt (formatter)
@@ -19,6 +20,7 @@
     //     "editor.defaultFormatter": "rust-lang.rust-analyzer",
     //     "editor.formatOnSave": true
     // },
+    
     // Uncomment to use clippy (better linter)
     // "rust-analyzer.checkOnSave": true,
     // "rust-analyzer.check.command": "clippy"
