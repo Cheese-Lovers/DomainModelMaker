@@ -81,20 +81,19 @@ export default function Nav(): ReactElement {
                     setFilenameField(text);
                 }}
                 onKeyDown={e => {
-                    const text = (e.target as HTMLInputElement).value;
+                    const el = (e.target as HTMLInputElement)
+                    const text = el.value;
                     if (text === null) return;
 
                     if (e.key === "Enter") {
                         e.preventDefault();
-                        if (text.trim() === "") {
-                            const defaultName = "Untitled";
-                            setFilenameField(defaultName);
-                            setFilename(defaultName);
-                        } else {
+                        if (text.trim() !== "") {
                             setFilename(text);
                         }
+                        setTimeout(() => el.blur());
                     }
                 }}
+                onBlur={() => setFilenameField(filename)}
             />
         </div>
     </nav>
