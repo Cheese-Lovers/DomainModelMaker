@@ -3,3 +3,12 @@ main {
   flex-direction: row;
   flex-grow: 1;
 }
+
+main>.image-preview {
+  flex-grow: 1;
+}
+
+main>.code-input {
+  flex-basis: 30rem;
+  flex-grow: 0;
+}

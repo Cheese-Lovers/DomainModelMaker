@@ -3,6 +3,7 @@ import Nav from "./Nav.tsx";
 import "./app.css";
 import CodeInput from "./CodeInput.tsx";
 import { saveFile } from "../index.tsx";
+import ImagePreview from "./ImagePreview.tsx";
 
 type Editor = {
     textContent: [string, (text: string) => void],
@@ -33,7 +34,7 @@ export default function App(): ReactElement {
         <Nav />
         <main>
             <CodeInput />
-            <div></div>
+            <ImagePreview />
         </main>
     </EditorContext.Provider>
 }
