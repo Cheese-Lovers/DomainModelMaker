@@ -41,8 +41,11 @@ export default function Nav(): ReactElement {
                 input.files[0].text()
                     .then(text => setTextContent(text));
 
-                setFilename(input.files[0].name);
-                setFilenameField(input.files[0].name);
+                const name = input.files[0].name;
+                const extension_index = name.lastIndexOf('.');
+                const simple_name = extension_index !== -1 ? name.substring(0, extension_index) : name;
+                setFilename(simple_name);
+                setFilenameField(simple_name);
             }
 
             input.removeEventListener('change', fileListener);
