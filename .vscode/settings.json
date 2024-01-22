@@ -8,6 +8,18 @@
         "editor.formatOnSave": true,
         "editor.tabSize": 2,
     },
+    "[javascriptreact]": {
+        "editor.formatOnSave": true,
+        "editor.tabSize": 4,
+    },
+    "[typescriptreact]": {
+        "editor.formatOnSave": true,
+        "editor.tabSize": 4,
+    },
+    "[typescript]": {
+        "editor.formatOnSave": true,
+        "editor.tabSize": 4,
+    },
     "[javascript]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 4,
@@ -20,7 +32,6 @@
     //     "editor.defaultFormatter": "rust-lang.rust-analyzer",
     //     "editor.formatOnSave": true
     // },
-    
     // Uncomment to use clippy (better linter)
     // "rust-analyzer.checkOnSave": true,
     // "rust-analyzer.check.command": "clippy"

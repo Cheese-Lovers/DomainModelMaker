@@ -1,14 +1,27 @@
-import React, { ReactElement, useContext, useState } from "react";
+import React, { ReactElement, useContext, useMemo, useRef, useState } from "react";
 import DropdownButton, { Dropdown, Option } from "./DropdownButton.tsx";
 import "./nav.css";
 import MaterialIcon from "./Symbol.tsx";
 import { EditorContext } from "./App.tsx";
-import { saveFile } from '../index.tsx'
+import { FILE_EXTENSION, saveFile } from '../index.tsx'
 
 export default function Nav(): ReactElement {
     const [textContent, setTextContent] = useContext(EditorContext)!.textContent;
     const [filename, setFilename] = useContext(EditorContext)!.fileName;
     const [filenameField, setFilenameField] = useState<string>(filename);
+    const filenameInput = useRef<HTMLInputElement>(null);
+
+    // Resize input with text
+    const filenameFieldWidth = useMemo(() => {
+        // Measure text size using temporary span element
+        const temp = document.createElement("span");
+        temp.style.whiteSpace = "pre";  // Don't trim whitespace
+        temp.textContent = filenameField;
+        document.body.appendChild(temp);
+        const inputWidth = temp.getBoundingClientRect().width;
+        document.body.removeChild(temp);
+        return inputWidth;
+    }, [filenameField]);
 
     const newButton = () => {
         setTextContent("");
@@ -20,7 +33,7 @@ export default function Nav(): ReactElement {
         const input = document.createElement('input');
         input.type = 'file';
         input.multiple = false;
-        input.accept = ".txt";
+        input.accept = `.txt, .${FILE_EXTENSION}`;
         input.hidden = true;
 
         const fileListener = () => {
@@ -73,7 +86,7 @@ export default function Nav(): ReactElement {
             </DropdownButton>
         </div>
         <div className="file-name">
-            <input className="flush" value={filenameField}
+            <input ref={filenameInput} type="text" style={{ width: filenameFieldWidth }} className="flush" value={filenameField}
                 onInput={e => {
                     const text = (e.target as HTMLInputElement).value;
                     if (text === null) return;
@@ -95,6 +108,14 @@ export default function Nav(): ReactElement {
                 }}
                 onBlur={() => setFilenameField(filename)}
             />
+            <span onClick={() => {
+                const input = filenameInput.current;
+                if (input === null) return;
+
+                input.focus()
+                input.selectionStart = Number.MAX_SAFE_INTEGER;
+                input.selectionEnd = Number.MAX_SAFE_INTEGER;
+            }}>.{FILE_EXTENSION}</span>
         </div>
     </nav>
 }
