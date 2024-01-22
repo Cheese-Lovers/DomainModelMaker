@@ -1,5 +1,5 @@
 use std::{ops::Range, ops::RangeFrom};
-use crate::tokenizer::{self, tokenize_line};
+use crate::domain_model::tokenizer::{self, tokenize_line};
 
 pub enum Style {
     Regular,

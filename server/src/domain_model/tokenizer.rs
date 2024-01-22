@@ -1,4 +1,4 @@
-use std::fmt; 
+use std::{any::Any, fmt}; 
 
 pub enum Token {
     Identifier(String),
@@ -23,6 +23,35 @@ impl fmt::Debug for Token {
             Token::Escape => write!(f, "Escape"),
             Token::Error(err) => write!(f, "{}", err),
         }
+    }
+}
+
+impl PartialEq<Token> for Token {
+    fn eq(&self, other: &Token) -> bool {
+       if self.type_id() == other.type_id() {
+            return match self {
+                Token::LeftArrow | Token::RightArrow | Token::Dash | Token::Dot | Token::Escape  => true,
+                Token::Identifier(str_1) => {
+                    match other {
+                        Token::Identifier(str_2) => str_1 == str_2,
+                        _ => false
+                    }
+                },
+                Token::Number(num_1) => {
+                    match other {
+                        Token::Number(num_2) => num_1 == num_2,
+                        _ => false
+                    }
+                },
+                Token::Error(str_1) => {
+                    match other {
+                        Token::Error(str_2) => str_1 == str_2,
+                        _ => false
+                    }
+                },
+            };
+        }
+        false
     }
 }
 

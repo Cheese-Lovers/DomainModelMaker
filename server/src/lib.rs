@@ -1,2 +1,1 @@
-pub mod tokenizer;
-pub mod graph;
+pub mod domain_model;

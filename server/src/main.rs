@@ -1,16 +1,16 @@
-use server::tokenizer::{self};
+use server::domain_model::tokenizer::{self};
 
 fn main() {
     // let x = 0..;
-    let input = "controller-1..-controls-1>game";
-    let tokens = tokenizer::tokenize_line(input.to_string());
-    println!("{}", input);
-    match tokens {
-        None => println!("None"),
-        Some(vec) => {
-            println!("{:?}", vec);
-        }
-    }
+    // let input = "controller-1..-controls-1>game";
+    // let tokens = tokenizer::tokenize_line(input.to_string());
+    // println!("{}", input);
+    // match tokens {
+    //     None => println!("None"),
+    //     Some(vec) => {
+    //         println!("{:?}", vec);
+    //     }
+    // }
 }
 
 
