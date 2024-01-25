@@ -1,10 +1,10 @@
 //! This module is for placing nodes based on a simulation.
-//! In this simulation, nodes are placed randomly* on a plane,
+//! In this simulation, nodes are placed spirally on a plane,
 //! and are pulled together at a speed inversely proportional
 //! to their 'mass', which is a measure of how many neighbors
 //! they have.
 //! 
-//! The way the nodes are placed randomly is consistent.
+//! The way the nodes are placed is consistent.
 //! i.e. for a given input graph, the initial placement of nodes
 //! is the same. 
 
