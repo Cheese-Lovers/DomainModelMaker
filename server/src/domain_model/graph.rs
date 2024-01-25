@@ -17,8 +17,8 @@ type EntityIndex = usize;
 
 pub struct Relation {
     text: String,
-    entity_1: EntityIndex,
-    entity_2: EntityIndex,
+    pub entity_1: EntityIndex,
+    pub entity_2: EntityIndex,
     arrow_1: Arrow,
     arrow_2: Arrow,
     mult_1: Multiplicity,
@@ -40,8 +40,8 @@ pub struct Entity {
 }
 
 pub struct Graph {
-    entities: Vec<Entity>,
-    relations: Vec<Relation>, // a relation is None if the parser could not recognize the statement (should be the same length as raw)
+    pub entities: Vec<Entity>,
+    pub relations: Vec<Relation>, // a relation is None if the parser could not recognize the statement (should be the same length as raw)
     raw: Vec<String>, // the raw input lines that make up the graph
 }
 
@@ -66,3 +66,27 @@ fn generate_graph (input: String) -> Option<Graph> {
     None // remove this
 }
 
+#[cfg(test)]
+pub mod test {
+    use super::*;
+
+    pub fn dummy_entity() -> Entity {
+        Entity {
+            name: "".to_string(),
+            color: 0xff00ffff,
+            style: Style::Regular
+        }
+    }
+
+    pub fn dummy_relation(entity_1: usize, entity_2: usize) -> Relation {
+        Relation {
+            text: "".to_string(),
+            entity_1,
+            entity_2,
+            arrow_1: Arrow::None,
+            arrow_2: Arrow::Arrow,
+            mult_1: Multiplicity::Number(1),
+            mult_2: Multiplicity::RangeFrom(1..)
+        }
+    }
+}
