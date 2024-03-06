@@ -55,16 +55,16 @@ impl PartialEq<Token> for Token {
     }
 }
 
-pub enum State {
+enum State {
     Identifier(String),
     Else(char),
-    Number(String)
+    Number(String),
+    Escape
 }
 
 
 // Smelliest Code in the Universe
-// NEEDS FIXING: THE LAST TOKEN IS NOT ACCOUNTED FOR
-pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
+pub fn tokenize_line_without_escape(input: String) -> Option<Vec<Token>> {
     let mut output = Vec::new();
     let mut state: State;
     
@@ -123,6 +123,7 @@ pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
                     }
                 }
             }
+            State::Escape => todo!(),
         }
     }
 
@@ -131,10 +132,135 @@ pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
             State::Else(ch) => generate_else_token(ch),
             State::Number(n) => Token::Number(n.parse().unwrap()),
             State::Identifier(s) => Token::Identifier(s.clone()),
+            State::Escape => todo!(),
         }
     );
 
+    // handle_escape_characters(output);
+
     Some(output)
+}
+
+pub fn tokenize_line(input: String) -> Option<Vec<Token>> {
+    let mut output = Vec::new();
+    let mut state: State;
+    
+    let c = input.chars().next();
+    
+    state = match c {
+        None => return None,
+        Some('-') | Some('.') | Some('<') | Some('>') => State::Else('\n'), // newline char will not be added to the list of tokens
+        Some('\\') => State::Escape,
+        Some(x) if x.is_numeric() => State::Number(String::new()),
+        _ => State::Identifier(String::new())
+    };  
+
+    for c in input.chars() {
+
+        match state {
+            State::Identifier(ref s) => {
+                state = match c {
+                    '-' | '.' | '<' | '>' | '\n' => {
+                        output.push(Token::Identifier(s.clone()));
+                        State::Else(c)
+                    },
+                    x if x.is_numeric() => {
+                        output.push(Token::Identifier(s.clone()));
+                        State::Number(c.to_string())
+                    },
+                    '\\' => {
+                        output.push(Token::Identifier(s.clone()));
+                        State::Escape
+                    },
+                    _ => State::Identifier(s.clone() + &c.to_string())
+                }
+            },
+            State::Number(ref n) => {
+                state = match c {
+                    '-' | '.' | '<' | '>' | '\n' => {
+                        output.push(Token::Number(n.parse().unwrap()));
+                        State::Else(c)
+                    },
+                    x if x.is_numeric() => {
+                        State::Number(n.clone() + &c.to_string())
+                    },
+                    '\\' => {
+                        output.push(Token::Number(n.parse().unwrap()));
+                        State::Escape
+                    },
+                    _ => {
+                        output.push(Token::Number(n.parse().unwrap()));
+                        State::Identifier(c.to_string())
+                    }
+                }
+            }
+            State::Else(ch) => {
+                output.push(generate_else_token(ch));
+                
+                state = match c {
+                    '-'| '.' | '<' | '>' | '\n' => {
+                        State::Else(c)
+                    },
+                    x if x.is_numeric() => {
+                        State::Number(c.to_string())
+                    },
+                    '\\' => {
+                        State::Escape
+                    },
+                    _ => {
+                        State::Identifier(c.to_string())
+                    }
+                }
+            }
+            State::Escape => {
+                state = match c {
+                    '-'| '.' | '<' | '>' | '\n' => {
+                        State::Else(c)
+                    },
+                    x if x.is_numeric() => {
+                        State::Number(c.to_string())
+                    },
+                    '\\' => {
+                        State::Escape
+                    },
+                    _ => {
+                        State::Identifier(c.to_string())
+                    }
+                }
+            },
+        }
+    }
+
+    output.push(
+        match state {
+            State::Else(ch) => generate_else_token(ch),
+            State::Number(n) => Token::Number(n.parse().unwrap()),
+            State::Identifier(s) => Token::Identifier(s.clone()),
+            State::Escape => todo!(),
+        }
+    );
+
+    // handle_escape_characters(output);
+
+    Some(output)
+}
+
+
+// CURRENTLY BROKEN... HOW FUN!
+fn handle_escape_characters(input: Vec<Token>) {
+    let output = Vec::<Token>::new();
+    for index in 0..input.len(){
+        match input.get(index) {
+            Some(Token::Identifier(s)) => todo!(),
+            Some(Token::Number(i)) => todo!(),
+            Some(Token::Dash) => todo!(),
+            Some(Token::LeftArrow) => todo!(),
+            // CONTINUE ALL TOKENS
+            Some(_) => todo!(),
+            None => todo!(),
+        }
+
+    }
 }
 
 fn generate_else_token(ch: char) -> Token {
