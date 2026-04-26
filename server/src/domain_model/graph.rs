@@ -1,5 +1,4 @@
 use std::{num::NonZeroUsize, ops::{Range, RangeFrom}};
-use crate::domain_model::tokenizer::tokenize_line;
 
 pub enum Style {
     Regular,
@@ -16,14 +15,14 @@ pub enum Arrow {
 type EntityIndex = usize;
 
 pub struct Relation {
-    text: String,
+    pub text: String,
     pub weight: NonZeroUsize,
     pub entity_1: EntityIndex,
     pub entity_2: EntityIndex,
-    arrow_1: Arrow,
-    arrow_2: Arrow,
-    mult_1: Multiplicity,
-    mult_2: Multiplicity
+    pub arrow_1: Arrow,
+    pub arrow_2: Arrow,
+    pub mult_1: Multiplicity,
+    pub mult_2: Multiplicity
 }
 
 pub enum Multiplicity {
@@ -35,36 +34,22 @@ pub enum Multiplicity {
 type ColorHexValue = u32;
 
 pub struct Entity {
-    name: String,
-    color: ColorHexValue,
-    style: Style
+    pub name: String,
+    pub color: ColorHexValue,
+    pub style: Style
 }
 
+#[derive(Default)]
 pub struct Graph {
     pub entities: Vec<Entity>,
     pub relations: Vec<Relation>, // a relation is None if the parser could not recognize the statement (should be the same length as raw)
-    raw: Vec<String>, // the raw input lines that make up the graph
+    pub raw: String, // the raw input that makes up the graph
 }
 
 impl Graph {
     pub fn new() -> Self {
-        Self {
-            entities: Vec::<Entity>::new(),
-            relations: Vec::<Relation>::new(),
-            raw: Vec::<String>::new()
-        }
+        Self {..Default::default()}
     }
-}
-
-fn generate_graph (input: String) -> Option<Graph> {
-    let mut output: Graph = Graph::new();
-    
-    for line in input.lines() {
-        output.raw.push(line.to_string());
-        let tokens = tokenize_line(line.to_string());
-    }
-
-    None // remove this
 }
 
 #[cfg(test)]

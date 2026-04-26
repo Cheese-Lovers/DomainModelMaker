@@ -5,9 +5,9 @@
 //! longest length present in the model + 1), while nodes that are connected
 //! have a strong spring.
 
-use std::{collections::HashMap, ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign}};
+use std::collections::HashMap;
 
-use crate::domain_model::graph::Graph;
+use crate::{domain_model::graph::Graph, image_generation::placers::{GridNode, GridPlacements, Vec2}};
 
 const STRONG_SPRING_K: f32 = 0.10;
 const WEAK_SPRING_K: f32 = 0.01;
@@ -111,6 +111,12 @@ impl Sim {
         }
     }
 
+    pub fn run(&mut self) {
+        for _ in 0..100 {
+            self.step();
+        }
+    }
+
     #[must_use]
     pub fn build_grid(mut self) -> GridPlacements {
         while !self.all_nodes_on_grid() {
@@ -163,142 +169,6 @@ impl SimNode {
     }
 }
 
-#[cfg_attr(not(test), allow(unused))]
-pub struct GridPlacements {
-    nodes: Vec<GridNode>
-}
-
-#[cfg_attr(not(test), allow(unused))]
-pub struct GridNode {
-    x: isize,
-    y: isize,
-    entity: usize
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Vec2 {
-    x: f32,
-    y: f32
-}
-
-#[allow(unused)]
-impl Vec2 {
-    pub fn squared_length(&self) -> f32 {
-        self.x * self.x + self.y * self.y
-    }
-
-    pub fn taxicab_length(&self) -> f32 {
-        self.x.abs() + self.y.abs()
-    }
-
-    pub fn chess_length(&self) -> f32 {
-        f32::max(self.x.abs(), self.y.abs())
-    }
-
-    pub fn normalized(&self) -> Option<Self> {
-        let sqr_len = self.squared_length();
-        if sqr_len < f32::EPSILON {
-            None
-        } else {
-            Some(*self / f32::sqrt(sqr_len))
-        }
-    }
-
-    pub unsafe fn normalized_unchecked(&self) -> Self {
-        *self / f32::sqrt(self.squared_length())
-    }
-
-    pub fn taxicab_normalized(&self) -> Option<Self> {
-        let taxicab_len = self.taxicab_length();
-        if taxicab_len < f32::EPSILON {
-            None
-        } else {
-            Some(*self / taxicab_len)
-        }
-    }
-
-    pub unsafe fn taxicab_normalized_unchecked(&self) -> Self {
-        *self / self.taxicab_length()
-    }
-
-    pub fn chess_normalized(&self) -> Option<Self> {
-        let chess_len = self.chess_length();
-        if chess_len < f32::EPSILON {
-            None
-        } else {
-            Some(*self / chess_len)
-        }
-    }
-
-    pub unsafe fn chess_normalized_unchecked(&self) -> Self {
-        *self / self.chess_length()
-    }
-
-    pub fn greatest_axis(&self) -> Self {
-        if self.x.abs() > self.y.abs() {
-            Self { x: self.x, y: 0.0 }
-        } else {
-            Self { x: 0.0, y: self.y }
-        }
-    }
-}
-
-impl Add for Vec2 {
-    type Output = Vec2;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Vec2 { x: self.x + rhs.x, y: self.y + rhs.y }
-    }
-}
-
-impl AddAssign for Vec2 {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl Sub for Vec2 {
-    type Output = Vec2;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Vec2 { x: self.x - rhs.x, y: self.y - rhs.y }
-    }
-}
-
-impl SubAssign for Vec2 {
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
-
-impl Mul<f32> for Vec2 {
-    type Output = Vec2;
-
-    fn mul(self, rhs: f32) -> Self::Output {
-        Vec2 { x: self.x * rhs, y: self.y * rhs }
-    }
-}
-
-impl MulAssign<f32> for Vec2 {
-    fn mul_assign(&mut self, rhs: f32) {
-        *self = *self * rhs;
-    }
-}
-
-impl Div<f32> for Vec2 {
-    type Output = Vec2;
-
-    fn div(self, rhs: f32) -> Self::Output {
-        Vec2 { x: self.x / rhs, y: self.y / rhs }
-    }
-}
-
-impl DivAssign<f32> for Vec2 {
-    fn div_assign(&mut self, rhs: f32) {
-        *self = *self / rhs;
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
     use std::collections::HashSet;
@@ -306,51 +176,6 @@ pub mod tests {
     use crate::domain_model::graph::test::*;
 
     use super::*;
-
-    fn run_sim(mut sim: Sim) -> GridPlacements {
-        for _ in 0..100 {
-            sim.step();
-        }
-
-        println!("Finished simulation. Building grid...");
-
-        let grid = sim.build_grid();
-
-        println!("Grid built.");
-
-        draw_grid(&grid);
-
-        grid
-    }
-
-    fn draw_grid(grid: &GridPlacements) {
-        let (min_x, max_x, min_y, max_y) = {
-            let (mut min_x, mut max_x, mut min_y, mut max_y) = (0, 0, 0, 0);
-
-            for node in grid.nodes.iter() {
-                min_x = isize::min(min_x, node.x);
-                max_x = isize::max(max_x, node.x);
-                min_y = isize::min(min_y, node.y);
-                max_y = isize::max(max_y, node.y);
-            }
-
-            (min_x, max_x, min_y, max_y)
-        };
-
-        for x in (min_x-1)..=(max_x+1) {
-            for y in (min_y-1)..=(max_y+1) {
-                if let Some(node) = grid.nodes.iter().find(|node| node.x == x && node.y == y) {
-                    print!("{}", node.entity)
-                } else if x == 0 || y == 0 {
-                    print!("*");
-                } else {
-                    print!("`");
-                }
-                print!(" ");
-            }
-            println!();
-        }
-    }
 
     #[test]
     fn generation_is_consistent() {
@@ -373,7 +198,10 @@ pub mod tests {
             dummy_relation(4, 2)
         ];
 
-        let grid = run_sim(Sim::new(&graph));
+        let mut sim = Sim::new(&graph);
+        sim.run();
+
+        let grid = sim.build_grid();
 
         let mut taken_points: HashSet<(isize, isize)> = HashSet::new();
 
@@ -400,7 +228,10 @@ pub mod tests {
             dummy_relation(1, 7), 
         ];
 
-        let grid = run_sim(Sim::new(&graph));
+        let mut sim = Sim::new(&graph);
+        sim.run();
+
+        let grid = sim.build_grid();
 
         for node in grid.nodes.iter() {
             let mut farthest_distance = f32::INFINITY;
