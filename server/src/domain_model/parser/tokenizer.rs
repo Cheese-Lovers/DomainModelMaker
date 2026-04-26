@@ -7,7 +7,7 @@ pub enum Token {
     RightArrow,
     Dash,
     Number(usize),
-    Dot,
+    Range,
     Escape,
     EndStatement
 }
@@ -20,7 +20,7 @@ impl fmt::Display for Token {
             Token::RightArrow => write!(f, ">"),
             Token::Dash => write!(f, "-"),
             Token::Number(n) => write!(f, "{}", n),
-            Token::Dot => write!(f, "."),
+            Token::Range => write!(f, ".."),
             Token::Escape => write!(f, "\\"),
             Token::EndStatement => writeln!(f),
         }
@@ -70,7 +70,7 @@ impl Iterator for TokenParsingIterator<'_> {
                     '.' => {
                         if let Some('.') = self.chars.peek() {
                             self.chars.next(); // Consume the second dot
-                            Some(Ok(Token::Dot))
+                            Some(Ok(Token::Range))
                         } else {
                             Some(Err(ParseTokenError::SawSingleDot))
                         }
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_tokenizer_not_one_dot() {
         let input = ".";
-        let output: Vec<Token> = vec![Token::Dot];
+        let output: Vec<Token> = vec![Token::Range];
 
         assert_ne!(tokenize(input), Ok(output));
     }
@@ -194,6 +194,27 @@ mod tests {
         let input_3 = "word with spaces";
 
         let output_3: Vec<Token> = vec![Token::Identifier("word with spaces".to_string())];
+
+        assert_eq!(tokenize(input_3), Ok(output_3));
+    }
+
+    #[test]
+    fn test_tokenizer_multiline() {
+        let input_3 = "peter-knows-wendy\nhook-knows-peter";
+
+        let output_3: Vec<Token> = vec![
+            Token::Identifier("peter".to_string()),
+            Token::Dash,
+            Token::Identifier("knows".to_string()),
+            Token::Dash,
+            Token::Identifier("wendy".to_string()),
+            Token::EndStatement,
+            Token::Identifier("hook".to_string()),
+            Token::Dash,
+            Token::Identifier("knows".to_string()),
+            Token::Dash,
+            Token::Identifier("peter".to_string())
+        ];
 
         assert_eq!(tokenize(input_3), Ok(output_3));
     }

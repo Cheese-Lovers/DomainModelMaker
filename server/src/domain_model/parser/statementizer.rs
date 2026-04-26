@@ -43,7 +43,35 @@ impl Statement {
 
         let weight_1 = count_dashes(&mut tokens);
 
-        let text = String::new();//parse_text(&mut tokens);
+        let text = {
+            if let Some(Token::Identifier(text)) = tokens.peek() {
+                tokens.next(); // Consume the text token
+                text.clone()
+            } else {
+                String::new()
+            }
+        };
+
+        if tokens.peek().is_none_or(|tok| matches!(tok, Token::EndStatement)) {
+            // The ident we just read wasn't text---it was actually the second entity.
+
+            let Some(weight) = NonZeroUsize::new(weight_1) else {
+                return Err(ParseStatementError::NoWeightSpecified);
+            };
+
+            return Ok(
+                Statement::NewRelation {
+                    text: String::new(),
+                    weight,
+                    entity_1: entity_1.clone(),
+                    entity_2: text.clone(),
+                    arrow_1,
+                    arrow_2: Arrow::None,
+                    mult_1,
+                    mult_2: Multiplicity::Number(1)
+                }
+            )
+        }
 
         let weight_2 = count_dashes(&mut tokens);
 
@@ -74,7 +102,7 @@ impl Statement {
             }
         }
 
-        let weight = weight_1 + weight_2;
+        let weight = usize::max(weight_1, weight_2);
 
         let Some(weight) = NonZeroUsize::new(weight) else {
             return Err(ParseStatementError::NoWeightSpecified);
@@ -107,7 +135,7 @@ fn count_dashes<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> usi
 fn parse_multiplicity<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> Multiplicity {
     if let Some(Token::Number(num)) = tokens.peek() {
         tokens.next(); // Consume the number
-        if let Some(Token::Dot) = tokens.peek() {
+        if let Some(Token::Range) = tokens.peek() {
             tokens.next(); // Consume the dot
             if let Some(Token::Number(num_2)) = tokens.peek() {
                 tokens.next(); // Consume the second number
@@ -213,8 +241,18 @@ pub mod test {
     }
 
     #[test]
-    fn basic_relation() {
+    fn unnamed_relation() {
         assert_statement_parsing!("a-b");
+    }
+
+    #[test]
+    fn named_relation() {
+        assert_statement_parsing!("a-loves-b");
+    }
+
+    #[test]
+    fn no_weight_relation() {
+        assert_parsing_failed!("a1loves1b");
     }
 
     #[test]
