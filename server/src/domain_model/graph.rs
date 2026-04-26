@@ -1,5 +1,5 @@
-use std::{ops::Range, ops::RangeFrom};
-use crate::domain_model::tokenizer::{self, tokenize_line};
+use std::{num::NonZeroUsize, ops::{Range, RangeFrom}};
+use crate::domain_model::tokenizer::tokenize_line;
 
 pub enum Style {
     Regular,
@@ -17,6 +17,7 @@ type EntityIndex = usize;
 
 pub struct Relation {
     text: String,
+    pub weight: NonZeroUsize,
     pub entity_1: EntityIndex,
     pub entity_2: EntityIndex,
     arrow_1: Arrow,
@@ -81,6 +82,7 @@ pub mod test {
     pub fn dummy_relation(entity_1: usize, entity_2: usize) -> Relation {
         Relation {
             text: "".to_string(),
+            weight: NonZeroUsize::new(1).unwrap(),
             entity_1,
             entity_2,
             arrow_1: Arrow::None,
