@@ -1,5 +1,8 @@
 use std::{num::NonZeroUsize, ops::{Range, RangeFrom}};
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
 pub enum Style {
     Regular,
     Dotted,
@@ -7,13 +10,15 @@ pub enum Style {
     Bold
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum Arrow {
     None,
     Arrow
 }
 
-type EntityIndex = usize;
+pub type EntityIndex = usize;
 
+#[derive(Serialize, Deserialize)]
 pub struct Relation {
     pub text: String,
     pub weight: NonZeroUsize,
@@ -25,6 +30,7 @@ pub struct Relation {
     pub mult_2: Multiplicity
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum Multiplicity {
     Range(Range<usize>),
     Number(usize),
@@ -33,13 +39,14 @@ pub enum Multiplicity {
 
 type ColorHexValue = u32;
 
+#[derive(Serialize, Deserialize)]
 pub struct Entity {
     pub name: String,
     pub color: ColorHexValue,
     pub style: Style
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct Graph {
     pub entities: Vec<Entity>,
     pub relations: Vec<Relation>, // a relation is None if the parser could not recognize the statement (should be the same length as raw)

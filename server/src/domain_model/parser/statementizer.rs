@@ -1,5 +1,7 @@
 use std::{iter::Peekable, num::NonZeroUsize};
 
+use serde::{Deserialize, Serialize};
+
 use crate::domain_model::{graph::{Arrow, Multiplicity}, parser::tokenizer::Token};
 
 
@@ -133,25 +135,25 @@ fn count_dashes<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> usi
 }
 
 fn parse_multiplicity<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> Multiplicity {
-    if let Some(Token::Number(num)) = tokens.peek() {
-        tokens.next(); // Consume the number
-        if let Some(Token::Range) = tokens.peek() {
-            tokens.next(); // Consume the dot
-            if let Some(Token::Number(num_2)) = tokens.peek() {
-                tokens.next(); // Consume the second number
-                Multiplicity::Range(*num..*num_2)
-            } else {
-                Multiplicity::RangeFrom(*num..)
-            }
-        } else {
-            Multiplicity::Number(*num)
-        }
-    } else {
-        Multiplicity::Number(1)
-    }
+    let Some(Token::Number(num)) = tokens.peek() else {
+        return Multiplicity::Number(1);
+    };
+    tokens.next(); // Consume the number
+
+    let Some(Token::Range) = tokens.peek() else {
+        return Multiplicity::Number(*num);
+    };
+    tokens.next(); // Consume the dot
+
+    let Some(Token::Number(num_2)) = tokens.peek() else {
+        return Multiplicity::RangeFrom(*num..);
+    };
+    tokens.next(); // Consume the second number
+
+    Multiplicity::Range(*num..*num_2)
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum ParseStatementError {
     /// The parser expected an identifier but got something else (or nothing at all)
     ExpectedIdentifier(Option<Token>),

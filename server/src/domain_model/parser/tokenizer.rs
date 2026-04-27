@@ -1,6 +1,8 @@
-use std::{fmt, iter::Peekable, str::Chars}; 
+use std::{fmt, iter::Peekable, str::Chars};
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+use serde::{Deserialize, Serialize}; 
+
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Token {
     Identifier(String),
     LeftArrow,
@@ -37,7 +39,7 @@ impl TokenParsingIterator<'_> {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum ParseTokenError {
     /// Suggests the user meant to write a range ("..") but only wrote a single dot
     SawSingleDot

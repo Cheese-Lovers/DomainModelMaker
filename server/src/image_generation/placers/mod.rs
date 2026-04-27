@@ -1,20 +1,25 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
+use serde::{Deserialize, Serialize};
+
+use crate::domain_model::graph::EntityIndex;
+
 pub mod force_directed;
 
 #[cfg_attr(not(test), allow(unused))]
+#[derive(Serialize, Deserialize)]
 pub struct GridPlacements {
     nodes: Vec<GridNode>
 }
 
 #[cfg_attr(not(test), allow(unused))]
+#[derive(Serialize, Deserialize)]
 pub struct GridNode {
-    x: isize,
-    y: isize,
-    entity: usize
+    entity: EntityIndex,
+    position: Vec2,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 struct Vec2 {
     x: f32,
     y: f32
@@ -144,10 +149,10 @@ impl std::fmt::Display for GridPlacements {
             let (mut min_x, mut max_x, mut min_y, mut max_y) = (0, 0, 0, 0);
 
             for node in self.nodes.iter() {
-                min_x = isize::min(min_x, node.x);
-                max_x = isize::max(max_x, node.x);
-                min_y = isize::min(min_y, node.y);
-                max_y = isize::max(max_y, node.y);
+                min_x = isize::min(min_x, node.position.x.floor() as isize);
+                max_x = isize::max(max_x, node.position.x.ceil() as isize);
+                min_y = isize::min(min_y, node.position.y.floor() as isize);
+                max_y = isize::max(max_y, node.position.y.ceil() as isize);
             }
 
             (min_x, max_x, min_y, max_y)
@@ -155,7 +160,7 @@ impl std::fmt::Display for GridPlacements {
 
         for x in (min_x-1)..=(max_x+1) {
             for y in (min_y-1)..=(max_y+1) {
-                if let Some(node) = self.nodes.iter().find(|node| node.x == x && node.y == y) {
+                if let Some(node) = self.nodes.iter().find(|node| node.position.x.round() as isize == x && node.position.y.round() as isize == y) {
                     write!(f, "{}", node.entity)?
                 } else if x % 2 == 0 && y % 2 == 0 {
                     if x == 0 || y == 0 {

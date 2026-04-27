@@ -4,9 +4,12 @@ mod statementizer;
 use core::fmt;
 use std::collections::{HashMap, HashSet};
 
+use serde::{Deserialize, Serialize};
+
 use crate::domain_model::{graph::{Entity, Graph, Style}, parser::{statementizer::{ParseStatementError, Statement, StatementParsingIterator}, tokenizer::{ParseTokenError, Token, TokenParsingIterator}}};
 
 
+#[derive(Serialize, Deserialize)]
 pub enum ParseGraphError {
     TokenizationFailed(ParseTokenError),
     StatementizationFailed(ParseStatementError),

@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use crate::{domain_model::graph::Graph, image_generation::placers::{GridNode, GridPlacements, Vec2}};
 
-const STRONG_SPRING_K: f32 = 0.10;
-const WEAK_SPRING_K: f32 = 0.01;
+const STRONG_SPRING_K: f32 = 0.20;
+const WEAK_SPRING_K: f32 = 0.00;
 
 type EntityID = usize;
 
@@ -23,7 +23,7 @@ pub struct Sim {
 
 impl Sim {
     pub fn new(graph: &Graph) -> Sim {
-        let angle_delta = 1.0; // radians
+        let angle_delta = 2.3999; // radians
         let mut nodes: Vec<SimNode> = graph.entities.iter().enumerate().map(|(entity, _)| {
             let (sin, cos) = (entity as f32 * angle_delta).sin_cos();
             let radius = (entity as f32).sqrt();
@@ -38,15 +38,16 @@ impl Sim {
 
         for relation in graph.relations.iter() {
             let node_neighbors = neighbors.entry(relation.entity_1).or_insert_with(HashMap::new);
-            node_neighbors.insert(relation.entity_2, 2.0 * relation.weight.get() as f32);
+            node_neighbors.insert(relation.entity_2, (relation.text.len() as f32 * 0.25).max(2.0) + 1.0 * (relation.weight.get() - 1) as f32);
 
             let other_neighbors = neighbors.entry(relation.entity_2).or_insert_with(HashMap::new);
-            other_neighbors.insert(relation.entity_1, 2.0 * relation.weight.get() as f32);
+            other_neighbors.insert(relation.entity_1, (relation.text.len() as f32 * 0.25).max(2.0) + 1.0 * (relation.weight.get() - 1) as f32);
         }
 
         let highest_desired_dist = neighbors.values()
             .flat_map(HashMap::values)
-            .fold(0.0, |a, b| f32::max(a, *b));
+            .map(|&dist| dist * 2.0)
+            .fold(3.0, f32::max);
 
         for entity_id in nodes.iter().enumerate().map(|(entity_id, _)| entity_id) {
             neighbors.entry(entity_id).or_insert_with(HashMap::new);
@@ -61,6 +62,7 @@ impl Sim {
             if node.pinned { continue }
             node.pos += node.vel;
             node.vel *= 0.5; // damping
+            node.vel.y += 0.05; // gravity
         }
         for node in buffer.iter_mut() {
             for other in self.nodes.iter() {
@@ -68,15 +70,15 @@ impl Sim {
 
                 let offset = other.pos - node.pos;
                 if let Some(neighbors) = self.neighbors.get(&node.entity_id) {
-                    let (spring_constant, desired_dist) = {
-                        if let Some(&desired_dist) = neighbors.get(&other.entity_id) {
-                            (STRONG_SPRING_K, desired_dist)
-                        } else {
-                            (WEAK_SPRING_K, self.highest_desired_dist * 2.0)
-                        }
+                    if let Some(&desired_dist) = neighbors.get(&other.entity_id) {
+                        let (spring_constant, desired_dist) = (STRONG_SPRING_K, desired_dist);
+                        let equilibrium = unsafe { offset.chess_normalized_unchecked() } * (desired_dist);
+                        node.vel += (offset - equilibrium) * spring_constant;
+                    } else {
+                        let desired_dist = 1.5;
+                        let equilibrium = unsafe { offset.chess_normalized_unchecked() } * (desired_dist);
+                        node.vel -= equilibrium / 2.0f32.powf(1.0 + offset.squared_length().sqrt());
                     };
-                    let equilibrium = unsafe { offset.chess_normalized_unchecked() } * (desired_dist);
-                    node.vel += (offset - equilibrium) * spring_constant;
                 }
             }
         }
@@ -127,23 +129,25 @@ impl Sim {
         let mut nodes: Vec<GridNode> = self.nodes.into_iter().map(|node| 
             GridNode { 
                 entity: node.entity_id, 
-                x: node.pos.x.round() as isize, 
-                y: node.pos.y.round() as isize
+                position: Vec2 {
+                    x: node.pos.x.round(), 
+                    y: node.pos.y.round()
+                }
             }
         ).collect();
 
         // Center around the origin
         let (avg_x, avg_y) = {
-            let (mut sum_x, mut sum_y) = (0, 0);
+            let (mut sum_x, mut sum_y) = (0.0, 0.0);
             for node in nodes.iter() {
-                sum_x += node.x;
-                sum_y += node.y;
+                sum_x += node.position.x;
+                sum_y += node.position.y;
             }
-            (sum_x / nodes.len() as isize, sum_y / nodes.len() as isize)
+            ((sum_x / nodes.len() as f32).floor(), (sum_y / nodes.len() as f32).floor())
         };
         for node in nodes.iter_mut() {
-            node.x -= avg_x;
-            node.y -= avg_y;
+            node.position.x -= avg_x;
+            node.position.y -= avg_y;
         }
 
         GridPlacements { nodes }
@@ -171,8 +175,6 @@ impl SimNode {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashSet;
-
     use crate::domain_model::graph::test::*;
 
     use super::*;
@@ -203,10 +205,13 @@ pub mod tests {
 
         let grid = sim.build_grid();
 
-        let mut taken_points: HashSet<(isize, isize)> = HashSet::new();
-
         for node in grid.nodes.iter() {
-            assert!(taken_points.insert((node.x, node.y)), "Point {:?} is already on the grid, but entity {} tried to go there.", (node.x, node.y), node.entity);
+            for other in grid.nodes.iter() {
+                if node.entity == other.entity { continue }
+                let node_pos = Vec2 { x: node.position.x, y: node.position.y };
+                let other_pos = Vec2 { x: other.position.x, y: other.position.y };
+                assert!(node_pos != other_pos, "Entities {} and {} are on the same point on the grid! ({:?})", node.entity, other.entity, node_pos);
+            }
         }
     }
 
@@ -237,8 +242,8 @@ pub mod tests {
             let mut farthest_distance = f32::INFINITY;
             for other in grid.nodes.iter() {
                 if node.entity == other.entity { continue }
-                let node_pos = Vec2 { x: node.x as f32, y: node.y as f32 };
-                let other_pos = Vec2 { x: other.x as f32, y: other.y as f32 };
+                let node_pos = node.position;
+                let other_pos = other.position;
                 farthest_distance = f32::min(farthest_distance, (other_pos - node_pos).taxicab_length());
             }
             assert!(farthest_distance <= 3.0, "Entity {} is too far away from everything! ({} units)", node.entity, farthest_distance);
