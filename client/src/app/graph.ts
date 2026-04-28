@@ -18,15 +18,16 @@ export type Relation = {
 
 export type Multiplicity = (
     {
-        type: "range",
-        start: number,
-        end: number
+        Range: {
+            start: number,
+            end: number
+        }
     } | {
-        type: "number",
-        value: number
+        Number: number
     } | {
-        type: "rangeFrom",
-        start: number
+        RangeFrom: {
+            start: number
+        }
     }
 )
 

@@ -1,6 +1,7 @@
 import React, { ReactElement, useContext, useRef } from "react";
 import "./imagePreview.css";
 import { GraphContext, PlacementsContext } from "./App";
+import { Multiplicity } from "./graph";
 
 export default function ImagePreview(): ReactElement {
     const graph = useContext(GraphContext)!;
@@ -162,6 +163,11 @@ export default function ImagePreview(): ReactElement {
                     x1 < x2 ? y2 : y1
                 ]
 
+                const [mult1, mult2] = [
+                    x1 < x2 ? relation.mult_1 : relation.mult_2,
+                    x1 < x2 ? relation.mult_2 : relation.mult_1
+                ]
+
                 return <g key={`relation-${index}`}>
                     <line
                         x1={x1}
@@ -175,31 +181,66 @@ export default function ImagePreview(): ReactElement {
                         markerEnd={markerEnd}
                     />
                     <text>
-                        <textPath
+                        <HighlightedTextPath
                             startOffset="50%"
-                            paintOrder="stroke"
-                            stroke="white"
-                            style={{ fontSize: "12px" }}
-                            strokeWidth={6}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            path={`M ${textX1} ${textY1} L ${textX2} ${textY2}`}
-                        >
-                            {relation.text}
-                        </textPath>
-                        <textPath
-                            startOffset="50%"
-                            paintOrder="stroke"
                             style={{ fontSize: "12px" }}
                             textAnchor="middle"
                             dominantBaseline="middle"
                             path={`M ${textX1} ${textY1} L ${textX2} ${textY2}`}
                         >
                             {relation.text}
-                        </textPath>
+                        </HighlightedTextPath>
+                        <HighlightedTextPath
+                            startOffset="20px"
+                            style={{ fontSize: "12px" }}
+                            textAnchor="start"
+                            dominantBaseline="middle"
+                            path={`M ${textX1} ${textY1} L ${textX2} ${textY2}`}
+                        >
+                            <MultiplicityIndicator multiplicity={mult1} />
+                        </HighlightedTextPath>
+                        <HighlightedTextPath
+                            startOffset="100%"
+                            style={{ fontSize: "12px" }}
+                            textAnchor="end"
+                            dominantBaseline="middle"
+                            path={`M ${textX1} ${textY1} L ${textX2} ${textY2}`}
+                        >
+                            <tspan dx="-20"><MultiplicityIndicator multiplicity={mult2} /></tspan>
+                        </HighlightedTextPath>
                     </text>
                 </g>;
             })}
         </svg>
     </div>
+}
+
+function HighlightedTextPath(props: Readonly<React.SVGProps<SVGTextPathElement>>): ReactElement {
+    return <>
+        <textPath
+            {...props}
+            stroke="white"
+            strokeWidth={6}
+            strokeLinecap="round"
+            strokeDasharray={100}
+        />
+        <textPath
+            {...props}
+        />
+    </>
+}
+
+function MultiplicityIndicator(props: Readonly<{ multiplicity: Multiplicity }>): string {
+    if ("Number" in props.multiplicity) {
+        if (props.multiplicity.Number == 1) {
+            return "";
+        }
+        return "" + props.multiplicity.Number;
+    } else if ("Range" in props.multiplicity) {
+        return props.multiplicity.Range.start + ".." + props.multiplicity.Range.end;
+    } else if ("RangeFrom" in props.multiplicity) {
+        return props.multiplicity.RangeFrom.start + "..";
+    } else {
+        return "";
+    }
 }
