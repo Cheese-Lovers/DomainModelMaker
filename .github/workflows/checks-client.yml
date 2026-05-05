@@ -1,0 +1,65 @@
+name: Checks - Client
+
+on:
+  push:
+    branches: 
+      - 'main'
+    paths:
+      - '.github/workflows/checks-client.yml'
+      - 'client/**'
+      - '!client/public/**'
+  pull_request:
+    branches: 
+      - 'main'
+    paths:
+      - '.github/workflows/checks-client.yml'
+      - 'client/**'
+      - '!client/public/**'
+
+jobs:
+  build_webassembly:
+    # Need to build the Rust code first, otherwise webpack will fail to find the generated bindings
+    name: Build WebAssembly
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Build WebAssembly
+        run: wasm-pack build --target web
+      - name: Upload WebAssembly package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-pkg
+          path: server/pkg
+  build_client:
+    name: Build Client
+    runs-on: ubuntu-latest
+    needs: build_webassembly
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download WebAssembly package
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-pkg
+          path: server/pkg
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
+      - name: Test
+        run: pnpm test --watchAll=false --passWithNoTests

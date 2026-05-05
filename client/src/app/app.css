@@ -2,13 +2,14 @@ main {
   display: flex;
   flex-direction: row;
   flex-grow: 1;
-}
-
-main>.image-preview {
-  flex-grow: 1;
+  width: 100%;
+  height: 100%;
 }
 
 main>.code-input {
-  flex-basis: 30rem;
-  flex-grow: 0;
+  width: 30rem;
+}
+
+.material-symbols-rounded {
+  user-select: none;
 }
