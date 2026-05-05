@@ -214,16 +214,7 @@ impl Sim {
     }
 
     #[must_use]
-    pub fn build_grid(mut self) -> GridPlacements {
-        // const MAX_ITERATIONS: usize = 1000;
-        // let mut iteration = 0;
-
-        // while !self.all_nodes_on_grid() && iteration < MAX_ITERATIONS {
-        //     self.step_toward_grid();
-        //     self.keep_nodes_apart();
-        //     iteration += 1;
-        // }
-
+    pub fn build_grid(self) -> GridPlacements {
         let nodes: Vec<GridNode> = self.nodes.into_iter().map(|node| 
             GridNode { 
                 entity: node.entity_id, 
@@ -301,7 +292,7 @@ pub mod tests {
     #[test]
     fn nodes_stay_together() {
         let mut graph = Graph::new();
-        graph.entities = vec![dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity()];
+        graph.entities = vec![dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity(), dummy_entity()];
         graph.relations = vec![
             dummy_relation(0, 2), 
             dummy_relation(1, 2), 
@@ -320,6 +311,8 @@ pub mod tests {
         sim.run();
 
         let grid = sim.build_grid();
+
+        println!("{}", grid);
 
         for node in grid.nodes.iter() {
             let mut farthest_distance = f32::INFINITY;
