@@ -5,7 +5,7 @@ import CodeInput from "./CodeInput.tsx";
 import { saveFile } from "../index.tsx";
 import ImagePreview from "./ImagePreview.tsx";
 import { defaultGraph, defaultPlacements, Graph, GridPlacements } from "./graph.ts";
-import init, { generate_graph as generateGraph } from "../generator/server";
+import { generate_graph as generateGraph } from "../generator/server";
 
 type Editor = {
     textContent: [string, (text: string) => void],
@@ -45,17 +45,15 @@ export default function App(): ReactElement {
     }, [textContent, fileName]);
 
     useEffect(() => {
-        init().then(() => {
-            const graphResult = generateGraph(textContent);
-            console.log(JSON.stringify(graphResult));
+        const graphResult = generateGraph(textContent);
+        console.log(JSON.stringify(graphResult));
 
-            if ("Ok" in graphResult && graphResult.Ok) {
-                setGraph(graphResult.Ok[0]);
-                setPlacements(graphResult.Ok[1]);
-            } else {
-                // TODO: Popup (or something else?)
-            }
-        });
+        if ("Ok" in graphResult && graphResult.Ok) {
+            setGraph(graphResult.Ok[0]);
+            setPlacements(graphResult.Ok[1]);
+        } else {
+            // TODO: Popup (or something else?)
+        }
     }, [textContent])
 
     return <EditorContext.Provider value={editor}>

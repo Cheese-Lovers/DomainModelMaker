@@ -29,7 +29,6 @@ pub fn parse_graph(input: &str) -> Result<Graph, ParseGraphError> {
     
     let tokens = {
         TokenParsingIterator::new(input)
-            .map(|t| {println!("{t:?}"); t})
             .collect::<Result<Vec<Token>, ParseTokenError>>()
             .map_err(ParseGraphError::TokenizationFailed)
     }?;

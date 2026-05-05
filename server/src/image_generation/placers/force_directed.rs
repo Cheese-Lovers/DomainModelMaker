@@ -178,22 +178,13 @@ impl Sim {
             node.pos += (grid_pos - node.pos) * DELTA_TIME;
         }
     }
-    
-    fn all_nodes_on_grid(&self) -> bool {
-        !self.nodes.iter()
-            .any(|node| 
-                node.pinned ||
-                (node.pos.x - node.pos.x.round()).abs() >= 0.01 || 
-                (node.pos.y - node.pos.y.round()).abs() >= 0.01
-            )
-    }
 
     fn keep_nodes_apart(&mut self) {
         for i in 0..self.nodes.len() {
             for j in (i+1)..self.nodes.len() {
                 let offset = self.nodes[j].pos - self.nodes[i].pos;
                 if offset.squared_length() < 0.5625 {
-                    let push = unsafe { offset.normalized_unchecked() } * 0.75;
+                    let push = offset.normalized().unwrap_or(Vec2 { x: 0.0, y: 0.0 }) * 0.75;
                     if self.nodes[i].pinned && self.nodes[j].pinned {
                         continue;
                     } else if self.nodes[i].pinned {

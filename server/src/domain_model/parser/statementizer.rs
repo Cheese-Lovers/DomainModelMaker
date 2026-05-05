@@ -92,15 +92,18 @@ impl Statement {
 
         let weight_1 = count_dashes(tokens);
 
-        let text = match tokens.next() {
-            Some(Token::Identifier(text)) => text,
-            token => {
-                return Err(ParseStatementError::ExpectedIdentifier(token.cloned()))
-            }
+        let text = match tokens.peek() {
+            Some(Token::Identifier(text)) => {
+                tokens.next(); // Consume the identifier
+                Ok(text)
+            },
+            token => Err(ParseStatementError::ExpectedIdentifier(token.cloned().cloned())),
         };
 
         if tokens.peek().is_none() {
             // The ident we just read wasn't text---it was actually the second entity.
+
+            let text = text?;
 
             let Some(weight) = NonZeroUsize::new(weight_1) else {
                 return Err(ParseStatementError::NoWeightSpecified);
@@ -157,7 +160,7 @@ impl Statement {
 
         Ok(
             Statement::NewRelation {
-                text: Some(text.clone()),
+                text: text.ok().cloned(),
                 weight,
                 entity_1: entity_1.clone(),
                 entity_2: entity_2.clone(),

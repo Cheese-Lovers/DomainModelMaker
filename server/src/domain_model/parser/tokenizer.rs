@@ -165,6 +165,9 @@ fn parse_identifier_token(first_char: char, chars: &mut itertools::structs::Peek
             },
             (_, Some('\\')) => {
                 chars.next(); // Consume the backslash
+                if chars.peek().is_none() {
+                    return Some(Err(ParseTokenError::NoCharacterAfterEscape));
+                }
             },
             _ => {} // Keep accumulating characters
         }
