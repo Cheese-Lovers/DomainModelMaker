@@ -1,35 +1,38 @@
 
-export type Style = 'Regular' | 'Dotted' | 'Dashed' | 'Bold';
+export type Style = 'regular' | 'dotted' | 'dashed' | 'bold';
 
-export type Arrow = 'None' | 'Arrow';
+export type Arrow = 'none' | 'arrow';
 
 export type EntityIndex = number;
 
 export type Relation = {
-    text: string,
+    text: string | null,
     weight: number,
-    entity_1: EntityIndex,
-    entity_2: EntityIndex,
-    arrow_1: Arrow,
-    arrow_2: Arrow,
-    mult_1: Multiplicity,
-    mult_2: Multiplicity
+    entity1: EntityIndex,
+    entity2: EntityIndex,
+    arrow1: Arrow,
+    arrow2: Arrow,
+    mult1: Multiplicity,
+    mult2: Multiplicity
 }
 
-export type Multiplicity = (
-    {
-        Range: {
-            start: number,
-            end: number
-        }
-    } | {
-        Number: number
-    } | {
-        RangeFrom: {
-            start: number
-        }
+export type Multiplicity = ({
+    type: "none"
+} | {
+    type: "range",
+    value: {
+        start: number,
+        end: number
     }
-)
+} | {
+    type: "number",
+    value: number
+} | {
+    type: "rangeFrom",
+    value: {
+        start: number
+    }
+})
 
 export type ColorHexValue = number;
 

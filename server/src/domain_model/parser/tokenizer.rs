@@ -1,54 +1,83 @@
-use std::{fmt, iter::Peekable, str::Chars};
+use std::{fmt, str::Chars};
 
 use serde::{Deserialize, Serialize}; 
 
-#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Token {
+    Keyword(Keyword),
     Identifier(String),
     LeftArrow,
     RightArrow,
     Dash,
-    Number(usize),
+    NaturalNumber(usize),
+    Float(f32),
     Range,
-    Escape,
+    Colon,
     EndStatement
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Keyword {
+    Pin
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Token::Identifier(string) => write!(f, "{}", string),
+            Token::Keyword(keyword) => write!(f, "{}", keyword),
             Token::LeftArrow => write!(f, "<"),
             Token::RightArrow => write!(f, ">"),
             Token::Dash => write!(f, "-"),
-            Token::Number(n) => write!(f, "{}", n),
+            Token::NaturalNumber(n) => write!(f, "{}", n),
+            Token::Float(x) => write!(f, "{}", x),
             Token::Range => write!(f, ".."),
-            Token::Escape => write!(f, "\\"),
+            Token::Colon => write!(f, ":"),
             Token::EndStatement => writeln!(f),
         }
     }
 }
 
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Keyword::Pin => write!(f, "pin")
+        }
+    }
+}
+
 pub struct TokenParsingIterator<'a> {
-    chars: Peekable<Chars<'a>>,
+    chars: itertools::structs::PeekNth<Chars<'a>>,
 }
 
 impl TokenParsingIterator<'_> {
     pub fn new(input: &str) -> TokenParsingIterator<'_> {
-        TokenParsingIterator { chars: input.chars().peekable() }
+        TokenParsingIterator { chars: itertools::peek_nth(input.chars()) }
     }
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum ParseTokenError {
-    /// Suggests the user meant to write a range ("..") but only wrote a single dot
-    SawSingleDot
+    /// The user meant to write a range ("..") but only wrote a single dot
+    SawSingleDot,
+    /// The user included a dot in a number, but then included another dot after that (e.g. "1.2.3")
+    TwoDotsInNumber,
+    /// The user forgot to close an identifier
+    UnterminatedIdentifier,
+    /// The user used a tilde to indicate a negative number, but did not include a number after the tilde
+    NoNumberAfterTilde,
+    /// The user used a backslash to escape a character, but did not include a character after the backslash
+    NoCharacterAfterEscape
 }
 
 impl std::fmt::Display for ParseTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseTokenError::SawSingleDot => write!(f, "Saw single dot. Did you mean to write a range (\"..\")?")
+            ParseTokenError::SawSingleDot => write!(f, "Saw single dot. Did you mean to write a range (\"..\")?"),
+            ParseTokenError::TwoDotsInNumber => write!(f, "Two dots in number. Did you mean to write a range (\"..\")?"),
+            ParseTokenError::UnterminatedIdentifier => write!(f, "Unterminated identifier. Did you forget to close it?"),
+            ParseTokenError::NoNumberAfterTilde => write!(f, "No number after tilde. Did you forget to include a number after the tilde?"),
+            ParseTokenError::NoCharacterAfterEscape => write!(f, "No character after escape. Did you forget to include a character after the backslash?"),
         }
     }
 }
@@ -57,71 +86,140 @@ impl Iterator for TokenParsingIterator<'_> {
     type Item = Result<Token, ParseTokenError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        enum TokenParsingState {
-            Identifier(String),
-            Number(String)
+        while self.chars.peek().is_some_and(|c| *c == ' ') {
+            self.chars.next(); // Skip leading whitespace
         }
 
-        let mut state = match self.chars.peek() {
-            None => return None,
-            Some('-' | '.' | '<' | '>' | '\\' | '\n') => {
-                let symbol = self.chars.next().unwrap(); // Consume the symbol
-
-                return match symbol {
-                    '-' => Some(Ok(Token::Dash)),
-                    '.' => {
-                        if let Some('.') = self.chars.peek() {
-                            self.chars.next(); // Consume the second dot
-                            Some(Ok(Token::Range))
-                        } else {
-                            Some(Err(ParseTokenError::SawSingleDot))
-                        }
-                    },
-                    '<' => Some(Ok(Token::LeftArrow)),
-                    '>' => Some(Ok(Token::RightArrow)),
-                    '\\' => Some(Ok(Token::Escape)),
-                    '\n' => Some(Ok(Token::EndStatement)),
-                    _ => unreachable!()
-                }
-            },
-            Some(x) if x.is_ascii_digit() => TokenParsingState::Number(String::new()),
-            _ => TokenParsingState::Identifier(String::new())
-        };
-
-        while let (Some(curr), next) = (self.chars.next(), self.chars.peek().cloned()) {
-            let (TokenParsingState::Identifier(ref mut buffer) | TokenParsingState::Number(ref mut buffer)) = state;
-
-            buffer.push(curr);
-
-            match state {
-                TokenParsingState::Identifier(ref buffer) => {
-                    match next {
-                        None | Some('-' | '.' | '<' | '>' | '\\' | '\n') => {
-                            return Some(Ok(Token::Identifier(buffer.clone())));
-                        },
-                        Some(x) if x.is_ascii_digit() => {
-                            return Some(Ok(Token::Identifier(buffer.clone())));
-                        },
-                        _ => {}
-                    }
-                },
-                TokenParsingState::Number(ref buffer) => {
-                    match next {
-                        None | Some('-' | '.' | '<' | '>' | '\\' | '\n') => {
-                            return Some(Ok(Token::Number((buffer.clone()).parse().unwrap())));
-                        },
-                        Some(x) if !x.is_ascii_digit() => {
-                            return Some(Ok(Token::Number((buffer.clone()).parse().unwrap())));
-                        },
-                        _ => {
-                            state = TokenParsingState::Number(buffer.clone())
-                        }
-                    }
-                }
+        match self.chars.next()? {
+            // Dots and Ranges
+            '.' => {
+                let Some('.') = self.chars.peek() else {
+                    return Some(Err(ParseTokenError::SawSingleDot));
+                };
+                self.chars.next(); // Consume the second dot
+                Some(Ok(Token::Range))
             }
+            // Symbols
+            '-' => Some(Ok(Token::Dash)),
+            '<' => Some(Ok(Token::LeftArrow)),
+            '>' => Some(Ok(Token::RightArrow)),
+            ':' => Some(Ok(Token::Colon)),
+            '\n' => Some(Ok(Token::EndStatement)),
+            // Numbers
+            symbol @ ('~' | '0'..='9') => parse_number_token(symbol, &mut self.chars),
+            // Identifiers
+            symbol => parse_identifier_token(symbol, &mut self.chars)
+        }
+    }
+}
+
+fn parse_identifier_token(first_char: char, chars: &mut itertools::structs::PeekNth<Chars>) -> Option<Result<Token, ParseTokenError>> {
+    #[derive(Clone, Copy)]
+    enum IdentifierKind {
+        DoubleQuote,
+        Apostrophe,
+        Tick,
+        Bare
+    }
+
+    use IdentifierKind::*;
+
+    let mut buffer = String::new();
+
+    let start = match first_char {
+        '\\' => {
+            let Some(next_char) = chars.next() else {
+                return Some(Err(ParseTokenError::NoCharacterAfterEscape));
+            };
+            buffer.push(next_char); // Take the next character as a literal
+            Bare
+        },
+        '"' => DoubleQuote,
+        '\'' => Apostrophe,
+        '`' => Tick,
+        _ => {
+            buffer.push(first_char);
+            Bare
+        }
+    };
+
+    loop {
+        if 
+            let Bare = start &&
+            let None | Some(' ' | '-' | '.' | '<' | '>' | ':' | '\n' | '0'..='9') = chars.peek() &&
+            let Some(keyword) = try_parse_keyword(&buffer) 
+        {
+            return Some(Ok(Token::Keyword(keyword)));
         }
 
-        None
+        match (start, chars.peek()) {
+            (DoubleQuote, Some('\"')) | (Apostrophe, Some('\'')) | (Tick, Some('`')) => {
+                chars.next(); // Consume the closing quote
+                return Some(Ok(Token::Identifier(buffer.trim().to_string())));
+            },
+            (DoubleQuote | Apostrophe | Tick, None) => {
+                return Some(Err(ParseTokenError::UnterminatedIdentifier));
+            }
+            (Bare, None | Some('-' | '.' | '<' | '>' | ':' | '\n' | '0'..='9')) => {
+                return Some(Ok(Token::Identifier(buffer.trim().to_string())));
+            },
+            (_, Some('\\')) => {
+                chars.next(); // Consume the backslash
+            },
+            _ => {} // Keep accumulating characters
+        }
+
+        buffer.push(chars.next()?);
+    }
+}
+
+fn parse_number_token(first_char: char, chars: &mut itertools::structs::PeekNth<Chars>) -> Option<Result<Token, ParseTokenError>> {
+    let mut buffer = String::new();
+    buffer.push(first_char);
+
+    loop {
+        match chars.peek() {
+            Some('.') => {
+                if let Some('.') = chars.peek_nth(1) {
+                    // This is the start of a range, not a decimal point.
+                    return Some(parse_number_from_buffer(&buffer))
+                }
+                if contains_decimal_point(&buffer) {
+                    return Some(Err(ParseTokenError::TwoDotsInNumber))
+                }
+                buffer.push(chars.next()?);
+            },
+            Some('0'..='9') => {
+                buffer.push(chars.next()?);
+            },
+            _ => return Some(parse_number_from_buffer(&buffer))
+        }
+    }
+}
+
+fn parse_number_from_buffer(buffer: &str) -> Result<Token, ParseTokenError> {
+    let Some(number) = buffer.strip_prefix('~') else {
+        if contains_decimal_point(buffer) {
+            return Ok(Token::Float(buffer.parse().unwrap()))
+        } else {
+            return Ok(Token::NaturalNumber(buffer.parse().unwrap()))
+        }
+    };
+    // Since the number can be negative, it must be a float
+    let Some(number) = number.parse::<f32>().ok() else {
+        return Err(ParseTokenError::NoNumberAfterTilde)
+    };
+    Ok(Token::Float(-number))
+}
+
+fn contains_decimal_point(buffer: &str) -> bool {
+    buffer.contains('.')
+}
+
+fn try_parse_keyword(buffer: &str) -> Option<Keyword> {
+    match buffer.trim() {
+        "pin" => Some(Keyword::Pin),
+        _ => None
     }
 }
 

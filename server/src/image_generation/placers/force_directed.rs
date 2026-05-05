@@ -5,12 +5,30 @@
 //! longest length present in the model + 1), while nodes that are connected
 //! have a strong spring.
 
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use crate::{domain_model::graph::Graph, image_generation::placers::{GridNode, GridPlacements, Vec2}};
 
-const STRONG_SPRING_K: f32 = 0.20;
-const WEAK_SPRING_K: f32 = 0.00;
+const ITERATIONS: usize = 1000;
+const fn neighbor_spring_k(iterations: usize) -> f32 {
+    if iterations < 100 {
+        0.008 * iterations as f32 // Warm up
+    } else if iterations < ITERATIONS / 2 {
+        0.8
+    } else {
+        0.0
+    }
+}
+const DESIRED_EXPANSION_PUSH: f32 = 4.0;
+const EXPANSION_SPRING_K: f32 = 0.2;
+const fn orth_factor(iterations: usize) -> f32 {
+    if iterations < ITERATIONS / 2 {
+        0.0
+    } else {
+        0.8
+    }
+}
+const DELTA_TIME: f32 = 0.10;
 
 type EntityID = usize;
 
@@ -26,7 +44,7 @@ impl Sim {
         let angle_delta = 2.3999; // radians
         let mut nodes: Vec<SimNode> = graph.entities.iter().enumerate().map(|(entity, _)| {
             let (sin, cos) = (entity as f32 * angle_delta).sin_cos();
-            let radius = (entity as f32).sqrt();
+            let radius = 4.0 * (entity as f32).sqrt();
             SimNode::new(entity, radius * cos, radius * sin)
         }).collect();
 
@@ -34,14 +52,27 @@ impl Sim {
             sim_node.pinned = true;
         }
 
+        for (entity_id, pos) in graph.pins.iter() {
+            if let Some(sim_node) = nodes.get_mut(*entity_id) {
+                sim_node.pos = *pos;
+                sim_node.pinned = true;
+            }
+        }
+
         let mut neighbors = HashMap::new();
 
         for relation in graph.relations.iter() {
+            let relation_strength = {
+                let text_strength = relation.text.as_ref().map_or(0, |s| s.len()) as f32 * 0.2;
+                let weight_strength = (relation.weight.get() as f32 * 0.5 - 1.0).max(0.0);
+                2.0 + text_strength + weight_strength
+            };
+
             let node_neighbors = neighbors.entry(relation.entity_1).or_insert_with(HashMap::new);
-            node_neighbors.insert(relation.entity_2, (relation.text.len() as f32 * 0.25).max(2.0) + 1.0 * (relation.weight.get() - 1) as f32);
+            node_neighbors.insert(relation.entity_2, relation_strength);
 
             let other_neighbors = neighbors.entry(relation.entity_2).or_insert_with(HashMap::new);
-            other_neighbors.insert(relation.entity_1, (relation.text.len() as f32 * 0.25).max(2.0) + 1.0 * (relation.weight.get() - 1) as f32);
+            other_neighbors.insert(relation.entity_1, relation_strength);
         }
 
         let highest_desired_dist = neighbors.values()
@@ -56,29 +87,80 @@ impl Sim {
         Sim { nodes, neighbors, highest_desired_dist }
     }
 
-    fn step(&mut self) {
+    fn step(&mut self, iteration: usize, num_nodes: usize) {
         let mut buffer = self.nodes.clone();
         for node in buffer.iter_mut() {
             if node.pinned { continue }
-            node.pos += node.vel;
-            node.vel *= 0.5; // damping
-            node.vel.y += 0.05; // gravity
+            node.pos += node.vel * DELTA_TIME;
+            node.vel *= 0.95; // damping
         }
-        for node in buffer.iter_mut() {
-            for other in self.nodes.iter() {
+        for node in buffer.iter_mut().take(num_nodes) {
+            if node.pinned { continue }
+            for other in self.nodes.iter().take(num_nodes) {
                 if other.entity_id == node.entity_id { continue }
 
                 let offset = other.pos - node.pos;
                 if let Some(neighbors) = self.neighbors.get(&node.entity_id) {
-                    if let Some(&desired_dist) = neighbors.get(&other.entity_id) {
-                        let (spring_constant, desired_dist) = (STRONG_SPRING_K, desired_dist);
-                        let equilibrium = unsafe { offset.chess_normalized_unchecked() } * (desired_dist);
-                        node.vel += (offset - equilibrium) * spring_constant;
+                    let acceleration = if let Some(&desired_dist) = neighbors.get(&other.entity_id) {
+                        let spring_constant = neighbor_spring_k(iteration);
+                        
+                        let pull = {
+                            if let Some(normalized) = offset.chess_normalized() {
+                                let equilibrium = normalized * desired_dist;
+                                (offset - equilibrium) * spring_constant * DELTA_TIME
+                            } else {
+                                Vec2 { x: 0.0, y: 0.0 }
+                            }
+                        };
+
+                        let align = {
+                            // Check which spot next to them we are closest to and try to go there
+                            let (mut closest_spot, mut closest_squared_length) = (Vec2 { x: f32::INFINITY, y: f32::INFINITY }, f32::INFINITY);
+                            for spot_offset in [
+                                Vec2 { x: 0.0, y: 1.0 },
+                                Vec2 { x: 0.0, y: -1.0 },
+                                Vec2 { x: 1.0, y: 0.0 },
+                                Vec2 { x: -1.0, y: 0.0 },
+                                Vec2 { x: 1.0, y: 1.0 },
+                                Vec2 { x: 1.0, y: -1.0 },
+                                Vec2 { x: -1.0, y: 1.0 },
+                                Vec2 { x: -1.0, y: -1.0 },
+                            ] {
+                                let spot_pos = other.pos + spot_offset * desired_dist;
+                                let squared_dist = (spot_pos - node.pos).squared_length();
+                                if squared_dist < closest_squared_length {
+                                    closest_spot = spot_pos;
+                                    closest_squared_length = squared_dist;
+                                }
+                            }
+                            let to_orthogonal = closest_spot - node.pos;
+
+                            to_orthogonal * DELTA_TIME * orth_factor(iteration)
+                        };
+
+                        pull + align
                     } else {
-                        let desired_dist = 1.5;
-                        let equilibrium = unsafe { offset.chess_normalized_unchecked() } * (desired_dist);
-                        node.vel -= equilibrium / 2.0f32.powf(1.0 + offset.squared_length().sqrt());
+                        let push = {
+                            if let Some(normalized) = offset.taxicab_normalized() {
+                                let desired_offset = normalized * DESIRED_EXPANSION_PUSH;
+                                if offset.chess_length() < desired_offset.chess_length() {
+                                    (offset - desired_offset) * DELTA_TIME * EXPANSION_SPRING_K
+                                } else {
+                                    Vec2 { x: 0.0, y: 0.0 }
+                                }
+                            } else {
+                                Vec2 { x: 0.0, y: 0.0 }
+                            }
+                        };
+
+                        push
                     };
+
+                    if other.pinned {
+                        node.vel += acceleration * 2.0;
+                    } else {
+                        node.vel += acceleration;
+                    }
                 }
             }
         }
@@ -87,14 +169,20 @@ impl Sim {
 
     fn step_toward_grid(&mut self) {
         for node in self.nodes.iter_mut() {
+            if node.pinned { continue }
             let grid_pos = Vec2 { x: node.pos.x.round(), y: node.pos.y.round() };
-            node.pos += (grid_pos - node.pos) * 0.2;
+            if (node.pos - grid_pos).squared_length() < 0.0001 { 
+                node.pos = grid_pos;
+                continue;
+            }
+            node.pos += (grid_pos - node.pos) * DELTA_TIME;
         }
     }
     
     fn all_nodes_on_grid(&self) -> bool {
         !self.nodes.iter()
             .any(|node| 
+                node.pinned ||
                 (node.pos.x - node.pos.x.round()).abs() >= 0.01 || 
                 (node.pos.y - node.pos.y.round()).abs() >= 0.01
             )
@@ -106,49 +194,51 @@ impl Sim {
                 let offset = self.nodes[j].pos - self.nodes[i].pos;
                 if offset.squared_length() < 0.5625 {
                     let push = unsafe { offset.normalized_unchecked() } * 0.75;
-                    self.nodes[i].pos -= push;
-                    self.nodes[j].pos += push;
+                    if self.nodes[i].pinned && self.nodes[j].pinned {
+                        continue;
+                    } else if self.nodes[i].pinned {
+                        self.nodes[j].pos += push * 2.0;
+                    } else if self.nodes[j].pinned {
+                        self.nodes[i].pos -= push * 2.0;
+                    } else {
+                        self.nodes[i].pos -= push;
+                        self.nodes[j].pos += push;
+                    }
                 }
             }
         }
     }
 
     pub fn run(&mut self) {
-        for _ in 0..100 {
-            self.step();
+        // TODO: Skip pinned nodes
+        for nodes in 2..self.nodes.len() + 1 {
+            for iteration in 0..ITERATIONS {
+                self.step(iteration, nodes);
+            }
+            for _ in 0..100 {
+                self.step_toward_grid();
+                self.keep_nodes_apart();
+            }
         }
     }
 
     #[must_use]
     pub fn build_grid(mut self) -> GridPlacements {
-        while !self.all_nodes_on_grid() {
-            self.step_toward_grid();
-            self.keep_nodes_apart();
-        }
+        // const MAX_ITERATIONS: usize = 1000;
+        // let mut iteration = 0;
 
-        let mut nodes: Vec<GridNode> = self.nodes.into_iter().map(|node| 
+        // while !self.all_nodes_on_grid() && iteration < MAX_ITERATIONS {
+        //     self.step_toward_grid();
+        //     self.keep_nodes_apart();
+        //     iteration += 1;
+        // }
+
+        let nodes: Vec<GridNode> = self.nodes.into_iter().map(|node| 
             GridNode { 
                 entity: node.entity_id, 
-                position: Vec2 {
-                    x: node.pos.x.round(), 
-                    y: node.pos.y.round()
-                }
+                position: node.pos
             }
         ).collect();
-
-        // Center around the origin
-        let (avg_x, avg_y) = {
-            let (mut sum_x, mut sum_y) = (0.0, 0.0);
-            for node in nodes.iter() {
-                sum_x += node.position.x;
-                sum_y += node.position.y;
-            }
-            ((sum_x / nodes.len() as f32).floor(), (sum_y / nodes.len() as f32).floor())
-        };
-        for node in nodes.iter_mut() {
-            node.position.x -= avg_x;
-            node.position.y -= avg_y;
-        }
 
         GridPlacements { nodes }
     }
@@ -204,6 +294,8 @@ pub mod tests {
         sim.run();
 
         let grid = sim.build_grid();
+
+        println!("{}", grid);
 
         for node in grid.nodes.iter() {
             for other in grid.nodes.iter() {

@@ -20,9 +20,9 @@ pub struct GridNode {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-struct Vec2 {
-    x: f32,
-    y: f32
+pub struct Vec2 {
+    pub x: f32,
+    pub y: f32
 }
 
 #[allow(unused)]
@@ -78,11 +78,32 @@ impl Vec2 {
         *self / self.chess_length()
     }
 
+    pub fn least_axis(&self) -> Self {
+        if self.x.abs() > self.y.abs() {
+            Self { x: 0.0, y: self.y }
+        } else {
+            Self { x: self.x, y: 0.0 }
+        }
+    }
+
     pub fn greatest_axis(&self) -> Self {
         if self.x.abs() > self.y.abs() {
             Self { x: self.x, y: 0.0 }
         } else {
             Self { x: 0.0, y: self.y }
+        }
+    }
+
+    pub fn dot(&self, other: Self) -> f32 {
+        self.x * other.x + self.y * other.y
+    }
+
+    pub fn cosine_angle_to(&self, other: Self) -> f32 {
+        let mag_product = (self.squared_length() * other.squared_length()).sqrt();
+        if mag_product < f32::EPSILON {
+            0.0
+        } else {
+            (self.dot(other) / mag_product).clamp(-1.0, 1.0)
         }
     }
 }

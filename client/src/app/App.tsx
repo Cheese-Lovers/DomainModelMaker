@@ -9,7 +9,8 @@ import init, { generate_graph as generateGraph } from "../generator/server";
 
 type Editor = {
     textContent: [string, (text: string) => void],
-    fileName: [string, (text: string) => void]
+    fileName: [string, (text: string) => void],
+    hideUI: [boolean, (hide: boolean) => void]
 };
 
 export const EditorContext = createContext<Editor | null>(null);
@@ -18,6 +19,7 @@ export const PlacementsContext = createContext<GridPlacements | null>(null);
 
 export default function App(): ReactElement {
     const [textContent, setTextContent] = useState("");
+    const [hideUI, setHideUI] = useState(false);
     const [fileName, setFileName] = useState("Untitled");
     const [graph, setGraph] = useState(defaultGraph());
     const [placements, setPlacements] = useState(defaultPlacements());
@@ -25,9 +27,10 @@ export default function App(): ReactElement {
     const editor = useMemo(() => {
         return {
             textContent: [textContent, setTextContent],
-            fileName: [fileName, setFileName]
+            fileName: [fileName, setFileName],
+            hideUI: [hideUI, setHideUI]
         } as Editor;
-    }, [textContent, graph, fileName]);
+    }, [textContent, graph, fileName, hideUI]);
 
     useEffect(() => {
         const saveListener = (e: KeyboardEvent) => {

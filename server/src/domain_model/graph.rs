@@ -1,8 +1,11 @@
-use std::{num::NonZeroUsize, ops::{Range, RangeFrom}};
+use std::{collections::HashMap, num::NonZeroUsize, ops::{Range, RangeFrom}};
 
 use serde::{Deserialize, Serialize};
 
+use crate::image_generation::placers::Vec2;
+
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Style {
     Regular,
     Dotted,
@@ -10,7 +13,8 @@ pub enum Style {
     Bold
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Arrow {
     None,
     Arrow
@@ -19,8 +23,9 @@ pub enum Arrow {
 pub type EntityIndex = usize;
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Relation {
-    pub text: String,
+    pub text: Option<String>,
     pub weight: NonZeroUsize,
     pub entity_1: EntityIndex,
     pub entity_2: EntityIndex,
@@ -30,10 +35,15 @@ pub struct Relation {
     pub mult_2: Multiplicity
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "type", content = "value")]
 pub enum Multiplicity {
+    None,
+    #[serde(rename_all = "camelCase")]
     Range(Range<usize>),
+    #[serde(rename_all = "camelCase")]
     Number(usize),
+    #[serde(rename_all = "camelCase")]
     RangeFrom(RangeFrom<usize>)
 }
 
@@ -49,7 +59,8 @@ pub struct Entity {
 #[derive(Default, Serialize, Deserialize)]
 pub struct Graph {
     pub entities: Vec<Entity>,
-    pub relations: Vec<Relation>, // a relation is None if the parser could not recognize the statement (should be the same length as raw)
+    pub relations: Vec<Relation>,
+    pub pins: HashMap<EntityIndex, Vec2>,
     pub raw: String, // the raw input that makes up the graph
 }
 
@@ -73,7 +84,7 @@ pub mod test {
 
     pub fn dummy_relation(entity_1: usize, entity_2: usize) -> Relation {
         Relation {
-            text: "".to_string(),
+            text: None,
             weight: NonZeroUsize::new(1).unwrap(),
             entity_1,
             entity_2,

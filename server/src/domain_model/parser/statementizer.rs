@@ -2,12 +2,12 @@ use std::{iter::Peekable, num::NonZeroUsize};
 
 use serde::{Deserialize, Serialize};
 
-use crate::domain_model::{graph::{Arrow, Multiplicity}, parser::tokenizer::Token};
+use crate::domain_model::{graph::{Arrow, Multiplicity}, parser::tokenizer::{Keyword, Token}};
 
 
 pub enum Statement {
     NewRelation {
-        text: String,
+        text: Option<String>,
         weight: NonZeroUsize,
         entity_1: String,
         entity_2: String,
@@ -15,6 +15,11 @@ pub enum Statement {
         arrow_2: Arrow,
         mult_1: Multiplicity,
         mult_2: Multiplicity
+    },
+    Pin {
+        entity: String,
+        x: f32,
+        y: f32
     }
 }
 
@@ -23,12 +28,54 @@ impl Statement {
         // Assume everything is a new relation for now
         let mut tokens = tokens.iter().peekable();
 
-        let entity_1 = match tokens.next() {
-            Some(Token::Identifier(entity_1)) => entity_1,
-            token => {
-                return Err(ParseStatementError::ExpectedIdentifier(token.cloned()))
-            }
+        match tokens.peek() {
+            Some(Token::Keyword(Keyword::Pin)) => {
+                tokens.next(); // Consume the "pin" keyword
+                Self::try_from_pin_tokens(&mut tokens)
+            },
+            Some(Token::Identifier(entity_1)) => {
+                tokens.next(); // Consume the first identifier
+                Self::try_from_relation_tokens(entity_1, &mut tokens)
+            },
+            token => Err(ParseStatementError::ExpectedIdentifier(token.cloned().cloned()))
+        }
+    }
+
+    pub fn try_from_pin_tokens<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> Result<Statement, ParseStatementError> {
+        let entity = match tokens.next() {
+            Some(Token::Identifier(entity)) => entity,
+            token => return Err(ParseStatementError::ExpectedIdentifier(token.cloned()))
         };
+
+        match tokens.peek() {
+            Some(Token::Colon) => {
+                tokens.next(); // Consume the colon
+            },
+            token => return Err(ParseStatementError::ExpectedColon(token.cloned().cloned()))
+        }
+
+        let x = match tokens.next() {
+            Some(Token::NaturalNumber(x)) => *x as f32,
+            Some(Token::Float(x)) => *x,
+            token => return Err(ParseStatementError::ExpectedCoordinate(token.cloned()))
+        };
+
+        let y = match tokens.next() {
+            Some(Token::NaturalNumber(y)) => *y as f32,
+            Some(Token::Float(y)) => *y,
+            token => return Err(ParseStatementError::ExpectedCoordinate(token.cloned()))
+        };
+
+        match tokens.next() {
+            None | Some(Token::EndStatement) => {},
+            Some(token) => return Err(ParseStatementError::ExpectedEndOfStatement(token.clone()))
+        }
+
+        Ok(Statement::Pin { entity: entity.clone(), x, y })
+    }
+
+    pub fn try_from_relation_tokens<'a>(entity_1: &'a str, tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> Result<Statement, ParseStatementError> {
+        let entity_1 = entity_1.to_string();
 
         let arrow_1 = {
             if let Some(Token::LeftArrow) = tokens.peek() {
@@ -41,20 +88,18 @@ impl Statement {
             }
         };
 
-        let mult_1 = parse_multiplicity(&mut tokens);
+        let mult_1 = parse_multiplicity(tokens)?;
 
-        let weight_1 = count_dashes(&mut tokens);
+        let weight_1 = count_dashes(tokens);
 
-        let text = {
-            if let Some(Token::Identifier(text)) = tokens.peek() {
-                tokens.next(); // Consume the text token
-                text.clone()
-            } else {
-                String::new()
+        let text = match tokens.next() {
+            Some(Token::Identifier(text)) => text,
+            token => {
+                return Err(ParseStatementError::ExpectedIdentifier(token.cloned()))
             }
         };
 
-        if tokens.peek().is_none_or(|tok| matches!(tok, Token::EndStatement)) {
+        if tokens.peek().is_none() {
             // The ident we just read wasn't text---it was actually the second entity.
 
             let Some(weight) = NonZeroUsize::new(weight_1) else {
@@ -63,21 +108,21 @@ impl Statement {
 
             return Ok(
                 Statement::NewRelation {
-                    text: String::new(),
+                    text: None,
                     weight,
                     entity_1: entity_1.clone(),
                     entity_2: text.clone(),
                     arrow_1,
                     arrow_2: Arrow::None,
                     mult_1,
-                    mult_2: Multiplicity::Number(1)
+                    mult_2: Multiplicity::None
                 }
             )
         }
 
-        let weight_2 = count_dashes(&mut tokens);
+        let weight_2 = count_dashes(tokens);
 
-        let mult_2 = parse_multiplicity(&mut tokens);
+        let mult_2 = parse_multiplicity(tokens)?;
 
         let arrow_2 = {
             if let Some(Token::RightArrow) = tokens.peek() {
@@ -112,7 +157,7 @@ impl Statement {
 
         Ok(
             Statement::NewRelation {
-                text,
+                text: Some(text.clone()),
                 weight,
                 entity_1: entity_1.clone(),
                 entity_2: entity_2.clone(),
@@ -134,45 +179,62 @@ fn count_dashes<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> usi
     weight
 }
 
-fn parse_multiplicity<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> Multiplicity {
-    let Some(Token::Number(num)) = tokens.peek() else {
-        return Multiplicity::Number(1);
+fn parse_multiplicity<'a>(tokens: &mut Peekable<impl Iterator<Item=&'a Token>>) -> Result<Multiplicity, ParseStatementError> {
+    let num = match tokens.peek() {
+        Some(Token::NaturalNumber(num)) => num,
+        Some(token @ Token::Float(..)) => {
+            return Err(ParseStatementError::ExpectedNaturalNumber((*token).clone()));
+        }
+        _ => return Ok(Multiplicity::None)
     };
     tokens.next(); // Consume the number
 
     let Some(Token::Range) = tokens.peek() else {
-        return Multiplicity::Number(*num);
+        return Ok(Multiplicity::Number(*num));
     };
     tokens.next(); // Consume the dot
 
-    let Some(Token::Number(num_2)) = tokens.peek() else {
-        return Multiplicity::RangeFrom(*num..);
+    let num_2 = match tokens.peek() {
+        Some(Token::NaturalNumber(num_2)) => num_2,
+        Some(token @ Token::Float(..)) => {
+            return Err(ParseStatementError::ExpectedNaturalNumber((*token).clone()));
+        }
+        _ => return Ok(Multiplicity::RangeFrom(*num..))
     };
     tokens.next(); // Consume the second number
 
-    Multiplicity::Range(*num..*num_2)
+    Ok(Multiplicity::Range(*num..*num_2))
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum ParseStatementError {
     /// The parser expected an identifier but got something else (or nothing at all)
     ExpectedIdentifier(Option<Token>),
+    /// The parser expected a colon but got something else (or nothing at all)
+    ExpectedColon(Option<Token>),
+    /// The parser expected a coordinate but got something else (or nothing at all)
+    ExpectedCoordinate(Option<Token>),
     /// The parser encountered an arrow in the wrong direction
     ArrowInWrongDirection,
     /// Finished parsing before the end of the statement was reached
     /// Perhaps there's an extraneous identifier?
     ExpectedEndOfStatement(Token),
     /// No dashes were supplied
-    NoWeightSpecified
+    NoWeightSpecified,
+    /// The parser expected a natural number but got a float instead
+    ExpectedNaturalNumber(Token)
 }
 
 impl std::fmt::Display for ParseStatementError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseStatementError::ExpectedIdentifier(token) => write!(f, "Expected identifier, got {:?}", token),
+            ParseStatementError::ExpectedColon(token) => write!(f, "Expected colon, got {:?}", token),
+            ParseStatementError::ExpectedCoordinate(token) => write!(f, "Expected coordinate, got {:?}", token),
             ParseStatementError::ArrowInWrongDirection => write!(f, "Arrow in wrong direction"),
             ParseStatementError::ExpectedEndOfStatement(token) => write!(f, "Expected end of statement, got {:?}", token),
-            ParseStatementError::NoWeightSpecified => write!(f, "No weight specified. Please include at least one dash ('-') to indicate the weight of the relation.")
+            ParseStatementError::NoWeightSpecified => write!(f, "No weight specified. Please include at least one dash ('-') to indicate the weight of the relation."),
+            ParseStatementError::ExpectedNaturalNumber(token) => write!(f, "Expected natural number, got {:?}", token)
         }
     }
 }

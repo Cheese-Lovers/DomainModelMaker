@@ -2,14 +2,18 @@ import React, { ReactElement, useContext, useMemo, useRef, useState } from "reac
 import DropdownButton, { Dropdown, Option } from "./DropdownButton.tsx";
 import "./nav.css";
 import MaterialIcon from "./Symbol.tsx";
-import { EditorContext } from "./App.tsx";
+import { EditorContext, GraphContext, PlacementsContext } from "./App.tsx";
 import { FILE_EXTENSION, saveFile } from '../index.tsx'
+import { lockAllEntities, unlockAllEntities } from "./ImagePreview.tsx";
 
 export default function Nav(): ReactElement {
     const [textContent, setTextContent] = useContext(EditorContext)!.textContent;
+    const graph = useContext(GraphContext)!;
+    const placements = useContext(PlacementsContext)!;
     const [filename, setFilename] = useContext(EditorContext)!.fileName;
     const [filenameField, setFilenameField] = useState<string>(filename);
     const filenameInput = useRef<HTMLInputElement>(null);
+    const [hideUI, setHideUI] = useContext(EditorContext)!.hideUI;
 
     // Resize input with text
     const filenameFieldWidth = useMemo(() => {
@@ -72,13 +76,19 @@ export default function Nav(): ReactElement {
             <DropdownButton>
                 Edit
                 <Dropdown>
-                    <Option>Erm</Option>
+                    <Option onClick={() => lockAllEntities(textContent, setTextContent, graph, placements)}><MaterialIcon icon="lock" />Lock All Entities</Option>
+                    <Option onClick={() => unlockAllEntities(textContent, setTextContent, graph)}><MaterialIcon icon="lock_open_right" />Unlock All Entities</Option>
                 </Dropdown>
             </DropdownButton>
             <DropdownButton>
-                Format
+                View
                 <Dropdown>
-                    <Option>Erm</Option>
+                    <Option onClick={() => {
+                        setHideUI(!hideUI);
+                    }}>
+                        <MaterialIcon icon="visibility" />
+                        {hideUI ? "Show UI" : "Hide UI"}
+                    </Option>
                 </Dropdown>
             </DropdownButton>
             <DropdownButton>
