@@ -158,7 +158,7 @@ function RelationComponent(props: Readonly<{
     const slope = (y2 - y1) / (x2 - x1);
 
     // First, truncate the start of the line
-    if (x2 - x1 == 0) {
+    if (x2 - x1 === 0) {
         if (y2 > y1) {
             y1 = y1 + entity1Height / 2;
         } else {
@@ -193,7 +193,7 @@ function RelationComponent(props: Readonly<{
     }
 
     // Then, truncate the end of the line
-    if (x2 - x1 == 0) {
+    if (x2 - x1 === 0) {
         if (y2 > y1) {
             y2 = y2 - entity2Height / 2;
         } else {

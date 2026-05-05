@@ -30,7 +30,7 @@ export default function App(): ReactElement {
             fileName: [fileName, setFileName],
             hideUI: [hideUI, setHideUI]
         } as Editor;
-    }, [textContent, graph, fileName, hideUI]);
+    }, [textContent, fileName, hideUI]);
 
     useEffect(() => {
         const saveListener = (e: KeyboardEvent) => {
