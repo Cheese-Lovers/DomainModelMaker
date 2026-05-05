@@ -86,7 +86,7 @@ impl Iterator for TokenParsingIterator<'_> {
     type Item = Result<Token, ParseTokenError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.chars.peek().is_some_and(|c| *c == ' ') {
+        while self.chars.peek().is_some_and(|c| *c == ' ' || *c == '\r') {
             self.chars.next(); // Skip leading whitespace
         }
 
