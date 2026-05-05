@@ -94,7 +94,12 @@ export default function Nav(): ReactElement {
             <DropdownButton>
                 Help
                 <Dropdown>
-                    <Option>Erm</Option>
+                    <Option onClick={() => {
+                        window.open('https://www.github.com/Cheese-Lovers/DomainModelMaker')
+                    }}>
+                        <MaterialIcon icon="code" />
+                        GitHub
+                    </Option>
                 </Dropdown>
             </DropdownButton>
         </div>
