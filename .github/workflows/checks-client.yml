@@ -1,0 +1,40 @@
+name: Checks - Client
+
+on:
+  push:
+    branches: 
+      - 'main'
+    paths:
+      - '.github/workflows/checks-client.yml'
+      - 'client/**'
+      - '!client/public/**'
+  pull_request:
+    branches: 
+      - 'main'
+    paths:
+      - '.github/workflows/checks-client.yml'
+      - 'client/**'
+      - '!client/public/**'
+
+jobs:
+  build_client:
+    name: Build Client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
+      - name: Test
+        run: pnpm test --if-present
