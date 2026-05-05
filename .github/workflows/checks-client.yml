@@ -27,6 +27,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
       - name: Build WebAssembly
         run: wasm-pack build --target web
       - name: Upload WebAssembly package
